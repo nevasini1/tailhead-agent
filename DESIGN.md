@@ -15,7 +15,7 @@ This document supports the Preconfigured-style take-home: **scope**, **threat mo
 | **CLI** | Args / env, exit codes, `--json` / `--log-json`, trace IDs |
 | **Validation** | HTTPS + host allowlist + `/content/learn/` path |
 | **Session** | Chromium; optional persistent profile (Google SSO) or password login |
-| **Discovery** | Extract module/unit links; trail pages may require crawling module roots |
+| **Discovery** | Extract module/unit links; trail pages may require crawling module roots. Scroll rounds (`TRAILHEAD_DISCOVERY_SCROLL_ROUNDS`) merge lazy-loaded anchors. `detect_discovery_blockers()` flags login / geo / error pages; `DiscoveryError` (exit 2) if zero candidates after collection. |
 | **LLM agent** | **Pydantic**-validated ranking JSON (`llm_schemas.py`); optional **planner phase** + **repair pass** on schema/allowlist failure; optional **OpenAI strict JSON Schema**; **href allowlist** (no invented URLs). **LangGraph** (`ranking_graph.py`) is the **mandatory** orchestrator: **StateGraph** with conditional routing (prepare → planner → rank → repair? → finalize). |
 | **`org_executor`** | Protocol + `NoopOrgExecutor` / **`CliOrgExecutor`** (`TRAILHEAD_ORG_EXECUTOR=cli`); YAML checklists in `config/org_checklists.yaml`; CLI: **`org doctor`**, **`org checklist`**, **`org prepare`**. Human-in-the-loop only. |
 
@@ -37,7 +37,7 @@ Data flow: `start_url` → Playwright collects `UnitRef` list → optional plann
 
 | Failure | Behavior |
 |---------|----------|
-| **Trailhead DOM changes** | Discovery returns fewer links; tune waits (`TRAILHEAD_PAGE_SETTLE_MS`) or selectors in YAML |
+| **Trailhead DOM changes** | Discovery returns fewer links; tune waits (`TRAILHEAD_PAGE_SETTLE_MS`), **`TRAILHEAD_DISCOVERY_SCROLL_ROUNDS`**, or selectors in YAML. Zero usable links → **`DiscoveryError`** with hints (no LLM call). |
 | **SSO / MFA** | Password login may fail; use `trailhead-agent auth` + persistent profile |
 | **LLM 429 / quota** | Retries (Tenacity) + mapped error with links to rate-limit docs |
 | **Windows `SSLKEYLOGFILE` injection** | `sanitize_environment()` strips known-bad values |
@@ -47,7 +47,7 @@ Data flow: `start_url` → Playwright collects `UnitRef` list → optional plann
 
 - **`trace_id`**: per CLI invocation (contextvar + JSON logs).
 - **`duration_ms`**: wall time for `plan` browser + LLM segment.
-- **E2E bundles**: When `TRAILHEAD_RECORD_VIDEO_DIR` is set, `plan` / `open-unit` also write JSON next to `.webm` files (`e2e-plan-*.json`, `e2e-open-unit-*.json`, plus `*-latest.json`) for reproducible demos.
+- **E2E bundles**: When `TRAILHEAD_RECORD_VIDEO_DIR` is set, `plan` / `open-unit` write JSON next to `.webm` files (`e2e-plan-*.json`, `e2e-open-unit-*.json`, `*-latest.json`) including **`primary_video`**, **`e2e_session_videos`**, and append to **`e2e-manifest.json`** (chronological clips: plan, open-unit, `org prepare` when recording). Persistent-profile recording uses a **single tab** so one session typically yields **one** `.webm`.
 - **`--log-json`**: one JSON object per line on stderr for ingestion.
 
 ## v2 roadmap (honest)

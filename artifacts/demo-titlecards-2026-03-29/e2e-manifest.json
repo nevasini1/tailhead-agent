@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "video_dir": "C:\\Users\\saima\\Downloads\\preconfigured-trailhead-agent\\artifacts\\demo-titlecards-2026-03-29",
+  "updated_at_utc": "2026-03-29T04:07:00+00:00",
+  "recordings": [
+    {
+      "saved_at_utc": "2026-03-29T04:05:54.137983+00:00",
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "7466f5dc-42d1-48d0-9cd9-73e5eedeb9d4",
+      "primary_video": "9a4944319d1d998054d85cd3daa45d3e.webm",
+      "new_videos": [
+        "78ab3053340155b1bceab40518b5c1ea.webm",
+        "9a4944319d1d998054d85cd3daa45d3e.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database"
+    },
+    {
+      "saved_at_utc": "2026-03-29T04:06:15+00:00",
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "7513bf2b-136d-4598-b6ae-1800093d53f6",
+      "primary_video": "90c6e169414ec7f6671d3e683e57f495.webm",
+      "new_videos": [
+        "90c6e169414ec7f6671d3e683e57f495.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database"
+    }
+  ]
+}

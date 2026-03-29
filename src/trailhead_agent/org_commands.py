@@ -16,7 +16,9 @@ from trailhead_agent.cli_org_executor import (
     run_sf_org_display_json,
     sf_on_path,
 )
-from trailhead_agent.config import load_config, persistent_profile_dir, start_url_from_env
+from trailhead_agent.config import load_config, persistent_profile_dir, record_video_dir, start_url_from_env
+from trailhead_agent.context import get_trace_id
+from trailhead_agent.e2e_artifacts import append_e2e_manifest_recording, new_webm_names_sorted_by_mtime, webm_basenames
 from trailhead_agent.errors import OrgExecutorError
 from trailhead_agent.org_checklists import (
     checklist_json_list,
@@ -26,6 +28,7 @@ from trailhead_agent.org_checklists import (
 )
 from trailhead_agent.org_executor import OrgStep, TrailheadUnitContext, get_default_org_executor
 from trailhead_agent.runner import run_dry_plan
+from trailhead_agent.demo_titlecards import demo_org_prepare_browser
 from trailhead_agent.session import TrailheadBrowser
 from trailhead_agent.validation import validate_start_url
 
@@ -229,9 +232,25 @@ def run_org_prepare(
             url = validate_start_url(su)
             cfg = load_config(agent_config_path)
             logger.info("org_executor stage=prepare open_playground url=%s", url)
+            vroot = record_video_dir()
+            before_w = webm_basenames(vroot) if vroot else set()
             with TrailheadBrowser(cfg) as br:
+                demo_org_prepare_browser(br.page)
                 br.page.goto(url, wait_until="domcontentloaded")
                 br.delay()
+            if vroot:
+                newv = new_webm_names_sorted_by_mtime(vroot, before_w)
+                append_e2e_manifest_recording(
+                    vroot,
+                    {
+                        "source": "org_prepare",
+                        "command": "org prepare",
+                        "trace_id": get_trace_id(),
+                        "primary_video": (newv[-1] if newv else None),
+                        "new_videos": list(newv),
+                        "start_url": url,
+                    },
+                )
             warnings.append(
                 "Browser opened Trailhead page - complete Launch Playground / login manually "
                 "(human-in-the-loop)."

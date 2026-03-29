@@ -27,6 +27,14 @@ def test_write_e2e_plan_output_creates_files(tmp_path, monkeypatch):
     assert data["intent"] == "dev"
     assert data["duration_ms"] == 99
     assert len(data["units"]) == 1
+    assert "primary_video" in data
+    assert data["e2e_session_videos"] == []
+    man = tmp_path / "e2e-manifest.json"
+    assert man.is_file()
+    mdoc = json.loads(man.read_text(encoding="utf-8"))
+    assert mdoc["version"] == 1
+    assert len(mdoc["recordings"]) == 1
+    assert mdoc["recordings"][0]["source"] == "plan"
 
 
 def test_write_e2e_plan_includes_walk_ranked_visits(tmp_path, monkeypatch):

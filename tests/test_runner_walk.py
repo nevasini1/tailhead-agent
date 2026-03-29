@@ -6,7 +6,9 @@ from trailhead_agent.models import UnitRef
 from trailhead_agent.runner import walk_ranked_units_for_recording
 
 
-def test_walk_ranked_visits_each_href_in_order():
+def test_walk_ranked_visits_each_href_in_order(monkeypatch):
+    monkeypatch.delenv("TRAILHEAD_RECORD_VIDEO_DIR", raising=False)
+    monkeypatch.setenv("TRAILHEAD_DEMO_TITLECARDS", "0")
     page = MagicMock()
     u1 = UnitRef(
         title="A",

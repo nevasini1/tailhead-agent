@@ -117,6 +117,10 @@ Add to `.env.example` (when implementing):
 
 **Security:** never print refresh tokens; subprocess stderr/stdout scrubbing if needed.
 
+### 6.1 E2E video manifest (implemented)
+
+When **`TRAILHEAD_RECORD_VIDEO_DIR`** points at an artifacts folder, **`org prepare --open-playground`** appends a row to **`e2e-manifest.json`** (alongside **`plan`** / **`open-unit`** entries) with **`source`: `org_prepare`**, **`primary_video`**, and **`new_videos`**. Use the manifest to see every clip recorded into that directory, not only the latest `e2e-plan-*.json`.
+
 ---
 
 ## 7. Implementation phases

@@ -20,7 +20,11 @@ def test_run_plan_json_schema():
         "units",
         "trace_id",
         "duration_ms",
+        "primary_video",
+        "e2e_session_videos",
     }
+    assert d["primary_video"] is None
+    assert d["e2e_session_videos"] == []
     assert d["trace_id"] == "abc-123"
     assert d["duration_ms"] == 42
     assert isinstance(d["units"], list)

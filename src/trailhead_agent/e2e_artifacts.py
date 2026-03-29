@@ -18,9 +18,24 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+MANIFEST_FILENAME = "e2e-manifest.json"
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def webm_basenames(root: Path | None) -> set[str]:
+    if root is None or not root.is_dir():
+        return set()
+    return {p.name for p in root.glob("*.webm")}
+
+
+def new_webm_names_sorted_by_mtime(root: Path, before: set[str]) -> list[str]:
+    """Filenames of .webm files that appeared since ``before`` (sorted by mtime ascending)."""
+    after = webm_basenames(root)
+    new_names = sorted(after - before, key=lambda n: (root / n).stat().st_mtime)
+    return new_names
 
 
 def _snapshot_webms(root: Path) -> list[dict[str, Any]]:
@@ -46,6 +61,31 @@ def _snapshot_webms(root: Path) -> list[dict[str, Any]]:
     return [r[1] for r in rows[:20]]
 
 
+def append_e2e_manifest_recording(root: Path, entry: dict[str, Any]) -> None:
+    """
+    Append a clip description to e2e-manifest.json (plan, open-unit, org prepare, etc.).
+    """
+    path = root / MANIFEST_FILENAME
+    doc: dict[str, Any]
+    if path.is_file():
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            doc = {"version": 1, "recordings": []}
+    else:
+        doc = {"version": 1, "recordings": []}
+    recs = doc.get("recordings")
+    if not isinstance(recs, list):
+        recs = []
+    entry = {**entry, "saved_at_utc": entry.get("saved_at_utc") or _utc_now_iso()}
+    recs.append(entry)
+    doc["recordings"] = recs
+    doc["video_dir"] = str(root)
+    doc["updated_at_utc"] = _utc_now_iso()
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("e2e_manifest_updated path=%s recordings=%d", path, len(recs))
+
+
 def write_e2e_plan_output(plan: RunPlan) -> Path | None:
     """
     Write plan JSON beside recorded videos: e2e-plan-<trace_id>.json and e2e-plan-latest.json.
@@ -65,6 +105,17 @@ def write_e2e_plan_output(plan: RunPlan) -> Path | None:
     text = json.dumps(body, ensure_ascii=False, indent=2)
     path.write_text(text, encoding="utf-8")
     (root / "e2e-plan-latest.json").write_text(text, encoding="utf-8")
+    append_e2e_manifest_recording(
+        root,
+        {
+            "source": "plan",
+            "command": "plan",
+            "trace_id": plan.trace_id,
+            "primary_video": plan.primary_video,
+            "new_videos": list(plan.e2e_session_videos or []),
+            "start_url": plan.start_url,
+        },
+    )
     logger.info("e2e_plan_output_written path=%s", path)
     return path
 
@@ -79,6 +130,8 @@ def write_e2e_open_unit_output(
     ranked_unit_hrefs: list[str],
     visit_count: int | None = None,
     visited_unit_hrefs: list[str] | None = None,
+    primary_video: str | None = None,
+    e2e_session_videos: list[str] | None = None,
 ) -> Path | None:
     root = record_video_dir()
     if root is None:
@@ -90,6 +143,8 @@ def write_e2e_open_unit_output(
         "success": success,
         "video_dir": str(root),
         "video_files": _snapshot_webms(root),
+        "primary_video": primary_video,
+        "e2e_session_videos": e2e_session_videos or [],
         "trace_id": get_trace_id(),
         "label": label or start_url,
         "start_url": start_url,
@@ -105,5 +160,16 @@ def write_e2e_open_unit_output(
     text = json.dumps(body, ensure_ascii=False, indent=2)
     path.write_text(text, encoding="utf-8")
     (root / "e2e-open-unit-latest.json").write_text(text, encoding="utf-8")
+    append_e2e_manifest_recording(
+        root,
+        {
+            "source": "open_unit",
+            "command": "open-unit",
+            "trace_id": get_trace_id(),
+            "primary_video": primary_video,
+            "new_videos": list(e2e_session_videos or []),
+            "start_url": start_url,
+        },
+    )
     logger.info("e2e_open_unit_output_written path=%s", path)
     return path

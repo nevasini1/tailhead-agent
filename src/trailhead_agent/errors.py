@@ -19,6 +19,16 @@ class UrlValidationError(TrailheadAgentError):
     exit_code = 2
 
 
+class DiscoveryError(TrailheadAgentError):
+    """Trailhead DOM discovery failed (login wall, geo block, layout change, or no unit links)."""
+
+    exit_code = 2
+
+    def __init__(self, message: str, *, hints: list[str] | None = None) -> None:
+        self.hints = list(hints or [])
+        super().__init__(message)
+
+
 class LLMProviderError(TrailheadAgentError):
     """LLM API failures, bad JSON, or missing credentials."""
 

@@ -11,11 +11,18 @@ from trailhead_agent import __version__
 from trailhead_agent.config import (
     AgentConfig,
     persistent_profile_dir,
+    record_video_dir,
     record_video_scroll_demo,
     trailhead_origin,
 )
 from trailhead_agent.context import get_trace_id
+from trailhead_agent.demo_titlecards import (
+    demo_after_discovery,
+    demo_after_llm_rank,
+    demo_before_walk_unit,
+)
 from trailhead_agent.discovery import collect_units_for_seed
+from trailhead_agent.e2e_artifacts import new_webm_names_sorted_by_mtime, webm_basenames
 from trailhead_agent.llm_agent import select_and_rank_units
 from trailhead_agent.models import UnitRef
 from trailhead_agent.session import TrailheadBrowser
@@ -47,6 +54,8 @@ class RunPlan:
     trace_id: str | None = None
     duration_ms: int | None = None
     walk_ranked_visits: int | None = None
+    primary_video: str | None = None
+    e2e_session_videos: list[str] | None = None
 
     def to_json_dict(self) -> dict:
         d: dict = {
@@ -57,6 +66,8 @@ class RunPlan:
             "units": [
                 {"title": u.title, "href": u.href, "reason": u.reason or ""} for u in self.units
             ],
+            "primary_video": self.primary_video,
+            "e2e_session_videos": list(self.e2e_session_videos or []),
         }
         if self.trace_id:
             d["trace_id"] = self.trace_id
@@ -65,6 +76,16 @@ class RunPlan:
         if self.walk_ranked_visits is not None:
             d["walk_ranked_visits"] = self.walk_ranked_visits
         return d
+
+
+@dataclass
+class OpenUnitRun:
+    ok: bool
+    opened_href: str | None
+    ranked_unit_hrefs: list[str]
+    visited_unit_hrefs: list[str]
+    primary_video: str | None = None
+    e2e_session_videos: list[str] | None = None
 
 
 def _scroll_demo_for_recording(page: Page) -> None:
@@ -100,6 +121,12 @@ def walk_ranked_units_for_recording(page: Page, units: list[UnitRef], *, max_vis
             u.title,
             u.href,
         )
+        demo_before_walk_unit(
+            page,
+            index_one_based=i + 1,
+            total=len(to_visit),
+            title=u.title,
+        )
         try:
             page.goto(u.href, wait_until="domcontentloaded")
             page.wait_for_timeout(settle)
@@ -114,7 +141,9 @@ def walk_ranked_units_for_recording(page: Page, units: list[UnitRef], *, max_vis
 def build_plan(cfg: AgentConfig, page: Page, *, start_url: str, label: str, intent: str) -> RunPlan:
     raw_units = collect_units_for_seed(page, start_url)
     _scroll_demo_for_recording(page)
+    demo_after_discovery(page, candidate_count=len(raw_units))
     ranked = select_and_rank_units(intent=intent, candidates=raw_units)
+    demo_after_llm_rank(page, ranked_count=len(ranked), walk_will_visit=0)
     return RunPlan(label=label, start_url=start_url, intent=intent, units=ranked)
 
 
@@ -177,17 +206,23 @@ def run_dry_plan(
     start_url = validate_start_url(start_url)
     walk_n = _clamp_walk_count(walk_ranked)
     t0 = time.monotonic()
+    vroot = record_video_dir()
+    before_webm = webm_basenames(vroot) if vroot else set()
     with TrailheadBrowser(cfg) as br:
         page = br.page
         try_login(page, cfg.selectors)
         br.delay()
         raw = collect_units_for_seed(page, start_url)
         _scroll_demo_for_recording(page)
+        demo_after_discovery(page, candidate_count=len(raw))
         ranked = select_and_rank_units(intent=intent, candidates=raw)
+        demo_after_llm_rank(page, ranked_count=len(ranked), walk_will_visit=walk_n)
         walk_visited: list[str] = []
         if walk_n > 0 and ranked:
             walk_visited = walk_ranked_units_for_recording(page, ranked, max_visits=walk_n)
         elapsed_ms = int((time.monotonic() - t0) * 1000)
+        new_webms = new_webm_names_sorted_by_mtime(vroot, before_webm) if vroot else []
+        pv = new_webms[-1] if new_webms else None
         plan = RunPlan(
             label=label or start_url,
             start_url=start_url,
@@ -196,6 +231,8 @@ def run_dry_plan(
             trace_id=get_trace_id(),
             duration_ms=elapsed_ms,
             walk_ranked_visits=(len(walk_visited) if walk_n > 0 else None),
+            primary_video=pv,
+            e2e_session_videos=new_webms or None,
         )
         logger.info(
             "Plan %r: %d units after LLM agent (%d raw links discovered) duration_ms=%d",
@@ -225,13 +262,29 @@ def open_first_ranked_unit(
     intent: str,
     label: str | None = None,
     visit_count: int = 1,
-) -> tuple[bool, str | None, list[str], list[str]]:
-    """
-    Open the first ``visit_count`` LLM-ranked units in order (navigation only).
-    Returns (success, first_opened_href_or_none, all_ranked_hrefs, visited_hrefs_in_order).
-    """
+) -> OpenUnitRun:
+    """Open the first ``visit_count`` LLM-ranked units in order (navigation only)."""
     start_url = validate_start_url(start_url)
     vc = max(1, _clamp_walk_count(visit_count))
+    vroot = record_video_dir()
+    before_webm = webm_basenames(vroot) if vroot else set()
+
+    def _finish(
+        ok: bool,
+        opened: str | None,
+        ranked: list[str],
+        visited: list[str],
+    ) -> OpenUnitRun:
+        new_webms = new_webm_names_sorted_by_mtime(vroot, before_webm) if vroot else []
+        return OpenUnitRun(
+            ok=ok,
+            opened_href=opened,
+            ranked_unit_hrefs=ranked,
+            visited_unit_hrefs=visited,
+            primary_video=(new_webms[-1] if new_webms else None),
+            e2e_session_videos=new_webms or None,
+        )
+
     with TrailheadBrowser(cfg) as br:
         page = br.page
         try_login(page, cfg.selectors)
@@ -240,10 +293,10 @@ def open_first_ranked_unit(
         ranked = [u.href for u in plan.units]
         if not plan.units:
             logger.error("No units after LLM selection for %s", plan.start_url)
-            return False, None, ranked, []
+            return _finish(False, None, ranked, [])
         n = min(vc, len(plan.units))
         visited_hrefs = walk_ranked_units_for_recording(page, plan.units, max_visits=n)
         if not visited_hrefs:
             logger.error("open-unit: no successful navigations among top %d ranked units", n)
-            return False, None, ranked, []
-        return True, visited_hrefs[0], ranked, visited_hrefs
+            return _finish(False, None, ranked, visited_hrefs)
+        return _finish(True, visited_hrefs[0], ranked, visited_hrefs)

@@ -1,6 +1,6 @@
 # Trailhead agent — LLM-driven planner + Playwright discovery
 
-**Version:** 0.5.0 (see `pyproject.toml`).
+**Version:** 0.5.1 (see `pyproject.toml`).
 
 This project uses **two layers**:
 
@@ -35,7 +35,7 @@ It does **not** auto-submit quiz answers or bypass assessments.
 
 | Topic | Detail |
 |--------|--------|
-| **Exit codes** | `0` success; `1` generic / no unit opened; `2` configuration, URL validation, or **org / `sf` integration** (`OrgExecutorError`); `3` LLM/API failure; `130` Ctrl+C |
+| **Exit codes** | `0` success; `1` generic / no unit opened; `2` configuration, URL validation, **discovery failure** (`DiscoveryError`: login wall, no unit links, trail layout), or **org / `sf` integration** (`OrgExecutorError`); `3` LLM/API failure; `130` Ctrl+C |
 | **Structured logs** | `--log-json` → one JSON object per line on stderr |
 | **Machine output** | `plan --json` → single JSON document on stdout (INFO logs suppressed to reduce noise). The plan is an **ordered study queue**: each unit has `title`, `href`, and **`reason`** (short LLM rationale when the ranker returned one). It is not a full written syllabus—Trailhead content lives at each URL. |
 | **Health** | `trailhead-agent doctor` (`--json`) checks version, LLM keys, **`sf` on PATH**, org executor type, and **`sf org display`** connectivity when `sf` exists (**never** prints secrets) |
@@ -43,7 +43,7 @@ It does **not** auto-submit quiz answers or bypass assessments.
 | **LLM resilience** | Tenacity retries on rate limits / 5xx / connection errors (`LLM_MAX_RETRIES`, `LLM_RETRY_MIN_WAIT_S`, `LLM_RETRY_MAX_WAIT_S`) |
 | **Ranking pipeline** | **Pydantic** contracts (`llm_schemas.py`); logs `pipeline_stage=` (`build_payload`, `planner`, `llm_primary`, `validate`, `llm_repair`, `materialize`). Env: **`LLM_PLANNER_PHASE=1`** (extra planner call), **`LLM_RANKING_REPAIR=0`** to disable repair, **`LLM_OPENAI_STRICT_SCHEMA=1`** (OpenAI-only strict `json_schema`) |
 | **LangGraph orchestrator** | **Required.** Ranking always runs through **[LangGraph](https://github.com/langchain-ai/langgraph)** (`ranking_graph.py`): prepare → planner → rank → conditional repair → finalize. Installed with the base package (`langgraph`, `langchain-core` in `pyproject.toml`). |
-| **E2E artifacts** | **`plan --save-e2e`** or **`plan --artifacts-dir PATH`** saves Playwright **`.webm`** + **`e2e-plan-<trace_id>.json`** / **`e2e-plan-latest.json`** (same as stdout JSON plus `saved_at_utc`, `video_files`). **`open-unit`** supports the same flags. Env alternative: **`TRAILHEAD_RECORD_VIDEO_DIR`**. **`plan --walk-ranked N`** (and **`open-unit --visit-count N`**) navigates the first *N* ranked unit URLs in one session after ranking so recordings show clear URL-by-URL progression (navigation only). Plan JSON may include **`walk_ranked_visits`**. One-shot scripts default to walking a few units: **`scripts/run-e2e-plan.ps1`** / **`run-e2e-plan.sh`** (override with `-WalkRanked 0` or **`WALK_RANKED=0`**). This repo may include **sample runs under `artifacts/`** for demos; for your own work, prefer not committing large or repeated recordings (re-add `artifacts/` to `.gitignore` locally if needed). |
+| **E2E artifacts** | **`plan --save-e2e`** or **`plan --artifacts-dir PATH`** saves Playwright **`.webm`** + **`e2e-plan-<trace_id>.json`** / **`e2e-plan-latest.json`** (stdout-equivalent JSON plus `saved_at_utc`, **`primary_video`**, **`e2e_session_videos`** for clips created in that browser session, **`video_files`** snapshot, **`e2e-manifest.json`** appending an entry per `plan` / `open-unit` / recorded **`org prepare --open-playground`**). Env: **`TRAILHEAD_RECORD_VIDEO_DIR`**. **Persistent profile + recording:** only **one tab** is used when recording so you typically get **one `.webm` per session** (avoids extra videos from restored multi-tab profiles). Title cards: **`TRAILHEAD_DEMO_TITLECARDS=0`** to disable, **`TRAILHEAD_DEMO_TITLECARD_MS`** for dwell. **`plan --walk-ranked N`** / **`open-unit --visit-count N`**: ranked URL walk (navigation only). Plan JSON may include **`walk_ranked_visits`**. Scripts: **`scripts/run-e2e-plan.ps1`** / **`run-e2e-plan.sh`**. Sample **`artifacts/`** demos may omit large **`.webm`** files; JSON + **`e2e-manifest.json`** still describe runs. |
 | **Gemini SDK** | Prefer `pip install -e ".[gemini]"` (**google-genai**). Legacy `google-generativeai` is optional: `pip install -e ".[legacy-gemini]"` |
 | **Tests / types** | `pip install -e ".[dev]"` then `pytest` and `mypy src/trailhead_agent tests` |
 
@@ -115,7 +115,7 @@ trailhead-agent org prepare --deploy --project-dir C:\path\to\sfdx-project --sf-
 ## Architecture
 
 1. **Session** — Chromium; optional persistent profile or password login.
-2. **Discovery** — Collects module/unit links (trail → module roots → units when needed).
+2. **Discovery** — Collects module/unit links (trail → module roots → units when needed). Scroll rounds (**`TRAILHEAD_DISCOVERY_SCROLL_ROUNDS`**, default 4) help lazy-loaded pages. **Login / geo / error interstitials** are detected before ranking; empty results raise **`DiscoveryError` (exit 2)** with actionable hints instead of calling the LLM on zero candidates.
 3. **`llm_agent`** — OpenAI (default), **Gemini** (`google-genai`), or Anthropic; JSON-only parsing with href allowlisting.
 4. **Runner** — `plan` / `open-unit`; URL validation before navigation.
 5. **`org_executor`** — **`NoopOrgExecutor`** by default; **`CliOrgExecutor`** when **`TRAILHEAD_ORG_EXECUTOR=cli`** (`sf org display`, YAML checklists, optional **`sf project deploy`**). CLI: **`trailhead-agent org …`**. See [`DESIGN.md`](DESIGN.md) and [`PLAN_ORG_EXECUTOR.md`](PLAN_ORG_EXECUTOR.md).

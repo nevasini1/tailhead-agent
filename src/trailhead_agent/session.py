@@ -60,7 +60,17 @@ class TrailheadBrowser:
                     headless=hl,
                     viewport=viewport,
                 )
-            self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
+            # One browser tab = one .webm when recording; restored multi-tab profiles would
+            # otherwise emit multiple videos per session.
+            if video_dir is not None:
+                for p in list(self._context.pages):
+                    try:
+                        p.close()
+                    except Exception as e:
+                        logger.debug("close extra persistent page: %s", e)
+                self._page = self._context.new_page()
+            else:
+                self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
         else:
             self._browser = self._pw.chromium.launch(headless=hl)
             if video_dir is not None:

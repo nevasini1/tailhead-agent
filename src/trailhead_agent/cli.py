@@ -21,6 +21,7 @@ from trailhead_agent.context import set_trace_id
 from trailhead_agent.e2e_artifacts import write_e2e_open_unit_output, write_e2e_plan_output
 from trailhead_agent.errors import (
     ConfigurationError,
+    DiscoveryError,
     LLMProviderError,
     OrgExecutorError,
     TrailheadAgentError,
@@ -318,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "open-unit":
             if args.visit_count < 1 or args.visit_count > 100:
                 parser.error("--visit-count must be between 1 and 100")
-            ok, opened, ranked, visited = open_first_ranked_unit(
+            ou = open_first_ranked_unit(
                 cfg,
                 start_url=start,
                 intent=intent,
@@ -329,14 +330,21 @@ def main(argv: list[str] | None = None) -> int:
                 start_url=start,
                 intent=intent,
                 label=args.label,
-                success=ok,
-                opened_href=opened,
-                ranked_unit_hrefs=ranked,
+                success=ou.ok,
+                opened_href=ou.opened_href,
+                ranked_unit_hrefs=ou.ranked_unit_hrefs,
                 visit_count=args.visit_count,
-                visited_unit_hrefs=visited,
+                visited_unit_hrefs=ou.visited_unit_hrefs,
+                primary_video=ou.primary_video,
+                e2e_session_videos=ou.e2e_session_videos,
             )
-            return 0 if ok else 1
+            return 0 if ou.ok else 1
 
+    except DiscoveryError as e:
+        log.error("%s", e)
+        for h in e.hints:
+            log.error("  Hint: %s", h)
+        return e.exit_code
     except UrlValidationError as e:
         log.error("%s", e)
         return e.exit_code
