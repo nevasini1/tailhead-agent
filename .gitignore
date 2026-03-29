@@ -9,7 +9,6 @@ __pycache__/
 .mypy_cache/
 playwright-report/
 screenshots/
-artifacts/
 *.log
 .coverage
 htmlcov/
