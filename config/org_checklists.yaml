@@ -1,0 +1,45 @@
+# Human-in-the-loop org steps keyed by Trailhead module slug (path segment after /content/learn/modules/).
+# See trailhead_agent.org_checklists for resolution rules.
+
+checklists_by_module:
+  apex_database:
+    - step_id: launch_playground
+      description: >-
+        From the Trailhead unit, use Launch / Launch Playground (or connect your own Developer Edition)
+        so you have an org where you can run Apex and SOQL.
+      verification: manual
+    - step_id: open_dev_console
+      description: >-
+        In Salesforce Setup or App Launcher, open Developer Console (or VS Code with Salesforce Extensions)
+        linked to the same org.
+      verification: manual
+    - step_id: apex_hands_on
+      description: >-
+        Follow the unit's hands-on steps in the org (classes, anonymous Apex, or Lightning components as directed).
+        Complete the Trailhead challenge in the browser when you are done.
+      verification: manual
+
+  reports_dashboards:
+    - step_id: launch_or_connect
+      description: >-
+        Launch a Trailhead Playground or connect a compatible org with Reports & Dashboards available.
+      verification: manual
+    - step_id: reports_tab
+      description: >-
+        Open the Reports tab, create or run the report the unit describes, and verify results in the UI.
+      verification: manual
+    - step_id: challenge
+      description: >-
+        Complete any Trailhead challenge or quiz in the unit page (human verification - not automated here).
+      verification: manual
+
+# Used when the module slug is unknown but the URL is still under /content/learn/modules/
+default_module_steps:
+  - step_id: playground
+    description: >-
+      Ensure you have a Salesforce org (Trailhead Playground or DE) appropriate for this module.
+    verification: manual
+  - step_id: follow_unit
+    description: >-
+      Work through the unit's hands-on instructions inside your org; use Trailhead only for navigation and checks.
+    verification: manual

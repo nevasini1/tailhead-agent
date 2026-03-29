@@ -1,0 +1,15 @@
+{
+  "ordered_units": [
+    {
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_soql",
+      "title": "Write SOQL Queries",
+      "reason": "Developer-focused query language"
+    },
+    {
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_intro",
+      "title": "Get Started with Apex",
+      "reason": "Foundational"
+    }
+  ],
+  "excluded": []
+}

@@ -1,0 +1,14 @@
+# Browser automation only. What to learn and what to skip is decided by the LLM agent
+# (see TRAILHEAD_INTENT and llm_agent.py), not by keyword lists here.
+
+browser:
+  headless: true
+  viewport_width: 1280
+  viewport_height: 800
+  navigation_timeout_ms: 60000
+
+selectors:
+  login_email_input: 'input[type="email"], input[name="username"], #username'
+  login_password_input: 'input[type="password"], #password'
+  login_submit: 'input[type="submit"], button[type="submit"]'
+  unit_sidebar_links: 'a[href*="/content/learn/modules/"]'

@@ -1,0 +1,38 @@
+# Optional: add repo secrets GOOGLE_API_KEY, TRAILHEAD_START_URL, TRAILHEAD_INTENT, LLM_PROVIDER=gemini
+# then run this workflow manually from the Actions tab.
+
+name: E2E (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      LLM_PROVIDER: gemini
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      TRAILHEAD_START_URL: ${{ secrets.TRAILHEAD_START_URL }}
+      TRAILHEAD_INTENT: ${{ secrets.TRAILHEAD_INTENT }}
+      GEMINI_MODEL: gemini-2.5-flash
+      TRAILHEAD_AGENT_HEADLESS: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          pip install -e ".[gemini,dev]"
+          playwright install chromium
+
+      - name: Require secrets
+        run: |
+          test -n "$GOOGLE_API_KEY" || { echo "Add GOOGLE_API_KEY repository secret"; exit 1; }
+          test -n "$TRAILHEAD_START_URL" || { echo "Add TRAILHEAD_START_URL secret"; exit 1; }
+          test -n "$TRAILHEAD_INTENT" || { echo "Add TRAILHEAD_INTENT secret"; exit 1; }
+
+      - name: Plan (JSON)
+        run: trailhead-agent plan --json | head -c 4000

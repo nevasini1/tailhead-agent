@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trailhead-agent"
+version = "0.5.0"
+description = "Trailhead: Playwright discovery + LLM agent planning (production-oriented CLI)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "playwright>=1.49.0",
+  "pyyaml>=6.0.1",
+  "python-dotenv>=1.0.1",
+  "openai>=1.40.0",
+  "pydantic>=2.5.0",
+  "tenacity>=8.2.0",
+  "langgraph>=0.2.50",
+  "langchain-core>=0.3.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40.0"]
+gemini = ["google-genai>=1.40.0"]
+legacy-gemini = ["google-generativeai>=0.8.0"]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=4.0",
+  "ruff>=0.8.0",
+  "mypy>=1.8.0",
+  "types-PyYAML>=6.0.12",
+]
+
+[project.scripts]
+trailhead-agent = "trailhead_agent.cli:entrypoint"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = ["src"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
