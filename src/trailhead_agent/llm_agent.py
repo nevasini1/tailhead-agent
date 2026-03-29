@@ -332,7 +332,7 @@ def _gemini_complete_json_raw(system: str, user_payload: dict[str, Any]) -> tupl
             raise_mapped_llm_error("Gemini", e)
 
     try:
-        import google.generativeai as genai_legacy
+        import google.generativeai as genai_legacy  # type: ignore[import-untyped]
     except ModuleNotFoundError as e:
         raise LLMProviderError(
             "Install Gemini support: pip install 'trailhead-agent[gemini]' (uses google-genai)."
@@ -462,7 +462,7 @@ def _gemini_planner_raw(system: str, user_payload: dict[str, Any]) -> tuple[dict
         except Exception as e:
             raise_mapped_llm_error("Gemini", e)
     try:
-        import google.generativeai as genai_legacy
+        import google.generativeai as genai_legacy  # type: ignore[import-untyped]
     except ModuleNotFoundError as e:
         raise LLMProviderError(
             "Install Gemini support: pip install 'trailhead-agent[gemini]' (uses google-genai)."

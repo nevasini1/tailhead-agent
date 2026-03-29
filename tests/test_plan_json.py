@@ -1,5 +1,5 @@
-from trailhead_agent.runner import RunPlan
 from trailhead_agent.models import UnitRef
+from trailhead_agent.runner import RunPlan
 
 
 def test_run_plan_json_schema():

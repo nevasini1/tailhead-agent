@@ -18,6 +18,7 @@ from trailhead_agent.cli_org_executor import (
 )
 from trailhead_agent.config import load_config, persistent_profile_dir, record_video_dir, start_url_from_env
 from trailhead_agent.context import get_trace_id
+from trailhead_agent.demo_titlecards import demo_org_prepare_browser
 from trailhead_agent.e2e_artifacts import append_e2e_manifest_recording, new_webm_names_sorted_by_mtime, webm_basenames
 from trailhead_agent.errors import OrgExecutorError
 from trailhead_agent.org_checklists import (
@@ -28,7 +29,6 @@ from trailhead_agent.org_checklists import (
 )
 from trailhead_agent.org_executor import OrgStep, TrailheadUnitContext, get_default_org_executor
 from trailhead_agent.runner import run_dry_plan
-from trailhead_agent.demo_titlecards import demo_org_prepare_browser
 from trailhead_agent.session import TrailheadBrowser
 from trailhead_agent.validation import validate_start_url
 
