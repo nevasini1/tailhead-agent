@@ -1,0 +1,15 @@
+﻿{
+  "version": "0.5.0",
+  "llm": {
+    "provider": "gemini",
+    "ranking_orchestrator": "langgraph",
+    "api_key_configured": true
+  },
+  "config_path_hint": "(default config/default.yaml)",
+  "trailhead_start_url_set": true,
+  "trailhead_intent_set": true,
+  "org_executor": "NoopOrgExecutor",
+  "trailhead_org_executor_env": "noop",
+  "sf_on_path": false,
+  "sf_org_connected": false
+}

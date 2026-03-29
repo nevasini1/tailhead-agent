@@ -1,0 +1,9 @@
+﻿{
+  "executor": "NoopOrgExecutor",
+  "org_alias_resolved": "",
+  "playground_ready": false,
+  "warnings": [
+    "sf CLI not on PATH"
+  ],
+  "deploy": null
+}

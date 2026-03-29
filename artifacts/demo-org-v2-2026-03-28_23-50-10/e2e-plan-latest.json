@@ -1,0 +1,46 @@
+{
+  "saved_at_utc": "2026-03-29T03:50:44.520407+00:00",
+  "command": "plan",
+  "video_dir": "C:\\Users\\saima\\Downloads\\preconfigured-trailhead-agent\\artifacts\\demo-org-v2-2026-03-28_23-50-10",
+  "video_files": [
+    {
+      "name": "440d715011e541a76198699552f6a6c0.webm",
+      "size_bytes": 5382210,
+      "mtime_utc": "2026-03-29T03:50:44.435997+00:00"
+    }
+  ],
+  "agent_version": "0.5.0",
+  "label": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+  "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+  "intent": "Prioritize hands-on developer work: Apex, SOQL, DML, and coding. Exclude quizzes, certification exams, knowledge checks, and trivia.",
+  "units": [
+    {
+      "title": "Get Started with Apex",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_intro",
+      "reason": "This unit provides the foundational introduction to Apex, essential for hands-on developer work as requested by the intent."
+    },
+    {
+      "title": "Use sObjects",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_sobjects",
+      "reason": "Understanding sObjects is crucial for interacting with Salesforce data using Apex, directly supporting the hands-on coding goal."
+    },
+    {
+      "title": "Manipulate Records with DML",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_dml",
+      "reason": "This unit directly addresses DML operations, a core hands-on coding skill explicitly requested in the intent."
+    },
+    {
+      "title": "Write SOQL Queries",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_soql",
+      "reason": "This unit focuses on SOQL, a key querying language explicitly requested, providing essential hands-on coding practice."
+    },
+    {
+      "title": "Write SOSL Queries",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_sosl",
+      "reason": "This unit covers SOSL, another important querying language for Apex developers, complementing the SOQL skills for comprehensive data access."
+    }
+  ],
+  "trace_id": "13a19932-b73c-4167-ad6e-13d290373ad9",
+  "duration_ms": 33262,
+  "walk_ranked_visits": 3
+}

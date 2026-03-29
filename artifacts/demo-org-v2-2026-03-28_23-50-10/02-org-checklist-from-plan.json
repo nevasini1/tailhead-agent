@@ -1,0 +1,70 @@
+﻿{
+  "units": [
+    {
+      "title": "Get Started with Apex",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_intro",
+      "checklist_source": "apex_database",
+      "steps": [
+        {
+          "step_id": "launch_playground",
+          "description": "From the Trailhead unit, use Launch / Launch Playground (or connect your own Developer Edition) so you have an org where you can run Apex and SOQL.",
+          "verification": "manual"
+        },
+        {
+          "step_id": "open_dev_console",
+          "description": "In Salesforce Setup or App Launcher, open Developer Console (or VS Code with Salesforce Extensions) linked to the same org.",
+          "verification": "manual"
+        },
+        {
+          "step_id": "apex_hands_on",
+          "description": "Follow the unit's hands-on steps in the org (classes, anonymous Apex, or Lightning components as directed). Complete the Trailhead challenge in the browser when you are done.",
+          "verification": "manual"
+        }
+      ]
+    },
+    {
+      "title": "Use sObjects",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_sobjects",
+      "checklist_source": "apex_database",
+      "steps": [
+        {
+          "step_id": "launch_playground",
+          "description": "From the Trailhead unit, use Launch / Launch Playground (or connect your own Developer Edition) so you have an org where you can run Apex and SOQL.",
+          "verification": "manual"
+        },
+        {
+          "step_id": "open_dev_console",
+          "description": "In Salesforce Setup or App Launcher, open Developer Console (or VS Code with Salesforce Extensions) linked to the same org.",
+          "verification": "manual"
+        },
+        {
+          "step_id": "apex_hands_on",
+          "description": "Follow the unit's hands-on steps in the org (classes, anonymous Apex, or Lightning components as directed). Complete the Trailhead challenge in the browser when you are done.",
+          "verification": "manual"
+        }
+      ]
+    },
+    {
+      "title": "Manipulate Records with DML",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_dml",
+      "checklist_source": "apex_database",
+      "steps": [
+        {
+          "step_id": "launch_playground",
+          "description": "From the Trailhead unit, use Launch / Launch Playground (or connect your own Developer Edition) so you have an org where you can run Apex and SOQL.",
+          "verification": "manual"
+        },
+        {
+          "step_id": "open_dev_console",
+          "description": "In Salesforce Setup or App Launcher, open Developer Console (or VS Code with Salesforce Extensions) linked to the same org.",
+          "verification": "manual"
+        },
+        {
+          "step_id": "apex_hands_on",
+          "description": "Follow the unit's hands-on steps in the org (classes, anonymous Apex, or Lightning components as directed). Complete the Trailhead challenge in the browser when you are done.",
+          "verification": "manual"
+        }
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 This document is a **implementation roadmap** for extending the trailhead-agent with a real **`OrgExecutor`**—helping learners **prepare a Salesforce org / Playground** and follow **human-in-the-loop checklists** for hands-on units. It does **not** include auto-submitting Trailhead quizzes, knowledge checks, or bypassing assessments.
 
-**Existing code:** [`src/trailhead_agent/org_executor.py`](src/trailhead_agent/org_executor.py) (`OrgExecutor` protocol, `TrailheadUnitContext`, `OrgStep`, `NoopOrgExecutor`, `get_default_org_executor`). **Not yet called** from `cli.py` / `runner.py`.
+**Existing code:** [`src/trailhead_agent/org_executor.py`](src/trailhead_agent/org_executor.py) (`OrgExecutor` protocol, `TrailheadUnitContext`, `OrgStep`, `NoopOrgExecutor`, `get_default_org_executor`, **`CliOrgExecutor`**). **Wired from** [`cli.py`](src/trailhead_agent/cli.py) as **`trailhead-agent org …`** ([`org_commands.py`](src/trailhead_agent/org_commands.py)).
 
 **Design alignment:** [`DESIGN.md`](DESIGN.md) v2 roadmap §1–2.
 
