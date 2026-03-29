@@ -49,9 +49,15 @@ def _build_graph() -> Any:
 
     def node_prepare(state: RankingState) -> dict[str, Any]:
         import trailhead_agent.llm_agent as la
+        from trailhead_agent.demo_narration import narrate_graph_step
 
         logger.info("orchestrator_node=prepare")
         n = len(state["candidates"])
+        narrate_graph_step(
+            "prepare",
+            f"Built LLM user JSON: intent + {n} candidate(s) + execution_steps / hard_rules "
+            f"(ranking_user_message_context).",
+        )
         return {
             "payload": {
                 **la.ranking_user_message_context(candidate_count=n),
@@ -63,28 +69,38 @@ def _build_graph() -> Any:
 
     def node_planner(state: RankingState) -> dict[str, Any]:
         import trailhead_agent.llm_agent as la
+        from trailhead_agent.demo_narration import narrate_planner_done, narrate_planner_no_notes, narrate_planner_skipped
 
         if not la._planner_phase_enabled():
+            narrate_planner_skipped()
             return {}
         logger.info("orchestrator_node=planner")
         units = _units_from_dicts(state["candidates"])
         notes = la._run_planner_notes(state["intent"], units)
         if not notes:
+            narrate_planner_no_notes()
             return {}
         p = dict(state["payload"])
         p["planner_notes"] = notes
+        narrate_planner_done(notes_preview=notes)
         return {"payload": p, "planner_notes": notes}
 
     def node_rank_primary(state: RankingState) -> dict[str, Any]:
         import trailhead_agent.llm_agent as la
+        from trailhead_agent.demo_narration import narrate_graph_step, narrate_rank_primary_done
 
         logger.info("orchestrator_node=rank_primary")
+        narrate_graph_step(
+            "rank_primary",
+            "Calling the ranking LLM (JSON: ordered_units + excluded; every href must match discovery allowlist).",
+        )
         system = la._system_prompt()
         _data, raw, parsed = la._rank_once(system, state["payload"])
         units = _units_from_dicts(state["candidates"])
         ordered = materialize_ordered_units(parsed, units) if parsed is not None else []
         need = (parsed is None) or needs_repair_after_materialize(parsed, ordered, units)
         ranked_rows = [{"title": u.title, "href": u.href, "reason": u.reason} for u in ordered]
+        narrate_rank_primary_done(ordered_count=len(ordered), needs_repair=need)
         return {
             "raw_primary": raw,
             "parsed_primary_dump": parsed.model_dump() if parsed is not None else None,
@@ -106,8 +122,10 @@ def _build_graph() -> Any:
 
     def node_rank_repair(state: RankingState) -> dict[str, Any]:
         import trailhead_agent.llm_agent as la
+        from trailhead_agent.demo_narration import narrate_rank_repair_start
 
         logger.info("orchestrator_node=rank_repair")
+        narrate_rank_repair_start()
         n = len(state["candidates"])
         repair_payload: dict[str, Any] = {
             **la.ranking_user_message_context(candidate_count=n),
@@ -139,6 +157,8 @@ def _build_graph() -> Any:
         }
 
     def node_finalize(state: RankingState) -> dict[str, Any]:
+        from trailhead_agent.demo_narration import narrate_graph_step
+
         logger.info("orchestrator_node=finalize")
         units = _units_from_dicts(state["candidates"])
         by_href = {u.href: u for u in units}
@@ -178,6 +198,7 @@ def _build_graph() -> Any:
                     )
                 final_hrefs = [row["href"] for row in result_units]
 
+        narrate_graph_step("finalize", f"Emitting {len(result_units)} ranked row(s) for navigation / JSON output.")
         return {"result_hrefs": final_hrefs, "result_units": result_units}
 
     g: StateGraph = StateGraph(state_schema=RankingState)

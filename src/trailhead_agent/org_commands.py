@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +19,23 @@ from trailhead_agent.cli_org_executor import (
 )
 from trailhead_agent.config import load_config, persistent_profile_dir, record_video_dir, start_url_from_env
 from trailhead_agent.context import get_trace_id
-from trailhead_agent.demo_titlecards import demo_org_prepare_browser
-from trailhead_agent.e2e_artifacts import append_e2e_manifest_recording, new_webm_names_sorted_by_mtime, webm_basenames
+from trailhead_agent.demo_browser import bootstrap_recording_demo_environment
+from trailhead_agent.demo_narration import narrate_org_prepare_session
+from trailhead_agent.demo_titlecards import (
+    demo_org_prepare_browser,
+    demo_recording_end_card,
+    inject_recording_corner_tag,
+)
+from trailhead_agent.e2e_artifacts import (
+    append_e2e_manifest_recording,
+    choose_primary_webm,
+    friendly_rename_org_prepare_session,
+    friendly_video_names_enabled,
+    metadata_for_webm_names,
+    new_webm_names_sorted_by_mtime,
+    webm_basenames,
+)
+from trailhead_agent.e2e_viewer import viewer_html_report_enabled, write_e2e_viewer_html
 from trailhead_agent.errors import OrgExecutorError
 from trailhead_agent.org_checklists import (
     checklist_json_list,
@@ -28,7 +44,12 @@ from trailhead_agent.org_checklists import (
     resolve_checklist_for_context,
 )
 from trailhead_agent.org_executor import OrgStep, TrailheadUnitContext, get_default_org_executor
-from trailhead_agent.runner import run_dry_plan
+from trailhead_agent.org_prepare_demo_guide import build_org_prepare_demo_guide
+from trailhead_agent.runner import (
+    org_prepare_recording_min_settle_ms,
+    run_dry_plan,
+    settle_and_scroll_for_recording,
+)
 from trailhead_agent.session import TrailheadBrowser
 from trailhead_agent.validation import validate_start_url
 
@@ -211,6 +232,7 @@ def run_org_prepare(
         href=(start_url or start_url_from_env() or "https://trailhead.salesforce.com/"),
     )
     warnings: list[str] = []
+    org_e2e_video_root: Path | None = None
 
     ready = ex.ensure_playground_ready(ctx, org_alias=alias_resolved)
     if not sf_on_path():
@@ -230,23 +252,59 @@ def run_org_prepare(
             if not su:
                 raise OrgExecutorError("--start-url or TRAILHEAD_START_URL required with --open-playground.")
             url = validate_start_url(su)
+            bootstrap_recording_demo_environment()
             cfg = load_config(agent_config_path)
             logger.info("org_executor stage=prepare open_playground url=%s", url)
             vroot = record_video_dir()
+            narrate_org_prepare_session(
+                start_url=url,
+                open_playground=True,
+                record_dir=str(vroot) if vroot else None,
+                trace_id=get_trace_id(),
+            )
             before_w = webm_basenames(vroot) if vroot else set()
             with TrailheadBrowser(cfg) as br:
                 demo_org_prepare_browser(br.page)
-                br.page.goto(url, wait_until="domcontentloaded")
+                # When recording: wait for load + dwell + scroll so .webm shows real Trailhead chrome (not a white frame).
+                nav_wait = "load" if record_video_dir() else "domcontentloaded"
+                br.page.goto(url, wait_until=nav_wait, timeout=90_000)
+                if record_video_dir():
+                    inject_recording_corner_tag(br.page, session="org")
+                    settle_and_scroll_for_recording(
+                        br.page,
+                        min_settle_ms=org_prepare_recording_min_settle_ms(),
+                    )
+                    demo_recording_end_card(br.page, session="org")
                 br.delay()
             if vroot:
+                org_e2e_video_root = vroot
                 newv = new_webm_names_sorted_by_mtime(vroot, before_w)
+                if newv and friendly_video_names_enabled():
+                    newv, primary = friendly_rename_org_prepare_session(vroot, newv)
+                else:
+                    primary = choose_primary_webm(vroot, newv) if newv else None
+                session_meta = metadata_for_webm_names(vroot, newv, primary_name=primary)
+                prep_doc = {
+                    "saved_at_utc": datetime.now(timezone.utc).isoformat(),
+                    "command": "org prepare",
+                    "trace_id": get_trace_id(),
+                    "open_playground": True,
+                    "start_url": url,
+                    "video_dir": str(vroot),
+                    "primary_video": primary,
+                    "video_files": session_meta,
+                }
+                (vroot / "e2e-org-prepare-latest.json").write_text(
+                    json.dumps(prep_doc, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
                 append_e2e_manifest_recording(
                     vroot,
                     {
                         "source": "org_prepare",
                         "command": "org prepare",
                         "trace_id": get_trace_id(),
-                        "primary_video": (newv[-1] if newv else None),
+                        "primary_video": primary,
                         "new_videos": list(newv),
                         "start_url": url,
                     },
@@ -276,6 +334,24 @@ def run_org_prepare(
         "warnings": warnings,
         "deploy": deploy_result,
     }
+    if org_e2e_video_root is not None:
+        op_path = org_e2e_video_root / "e2e-org-prepare-latest.json"
+        if op_path.is_file():
+            try:
+                op_doc = json.loads(op_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                op_doc = {}
+            else:
+                op_doc["executor"] = report["executor"]
+                op_doc["org_alias_resolved"] = report["org_alias_resolved"]
+                op_doc["playground_ready"] = report["playground_ready"]
+                op_doc["warnings"] = list(report["warnings"])
+                op_doc["deploy"] = report["deploy"]
+                su = str(op_doc.get("start_url") or "").strip()
+                op_doc["demo_guide"] = build_org_prepare_demo_guide(start_url=su)
+                op_path.write_text(json.dumps(op_doc, ensure_ascii=False, indent=2), encoding="utf-8")
+        if viewer_html_report_enabled():
+            write_e2e_viewer_html(org_e2e_video_root)
     logger.info("org_executor stage=prepare done ready=%s", ready)
     if json_out:
         print(json.dumps(report, indent=2))

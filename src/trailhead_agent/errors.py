@@ -24,8 +24,15 @@ class DiscoveryError(TrailheadAgentError):
 
     exit_code = 2
 
-    def __init__(self, message: str, *, hints: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        hints: list[str] | None = None,
+        details: dict | None = None,
+    ) -> None:
         self.hints = list(hints or [])
+        self.details = dict(details or {})
         super().__init__(message)
 
 

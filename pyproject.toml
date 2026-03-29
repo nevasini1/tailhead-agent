@@ -30,6 +30,9 @@ dev = [
   "mypy>=1.8.0",
   "types-PyYAML>=6.0.12",
 ]
+docs = [
+  "fpdf2>=2.7.0",
+]
 
 [project.scripts]
 trailhead-agent = "trailhead_agent.cli:entrypoint"

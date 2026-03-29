@@ -14,10 +14,12 @@ from trailhead_agent.cli_org_executor import org_display_says_connected, run_sf_
 from trailhead_agent.config import (
     intent_from_env,
     load_config,
+    record_video_dir,
     sanitize_environment,
     start_url_from_env,
 )
 from trailhead_agent.context import set_trace_id
+from trailhead_agent.demo_narration import narrate_open_unit_session, narrate_plan_session
 from trailhead_agent.e2e_artifacts import write_e2e_open_unit_output, write_e2e_plan_output
 from trailhead_agent.errors import (
     ConfigurationError,
@@ -58,6 +60,14 @@ def _add_browser_e2e_args(p: argparse.ArgumentParser) -> None:
         "--save-e2e",
         action="store_true",
         help="plan / open-unit: shorthand for --artifacts-dir ./artifacts/e2e (from cwd).",
+    )
+    p.add_argument(
+        "--no-recording-demo-browser",
+        action="store_true",
+        help=(
+            "plan / open-unit: with --artifacts-dir, skip auto headed browser + slow-mo + demo viewport "
+            "(use for CI). Same as TRAILHEAD_RECORDING_DEMO_AUTO=0."
+        ),
     )
 
 
@@ -112,6 +122,12 @@ def _run_doctor(*, json_out: bool) -> int:
         print(f"  Org executor: {report['org_executor']} ({report['trailhead_org_executor_env']})")
         print(f"  sf on PATH: {sf_ok}")
         print(f"  sf org connected: {org_connected}")
+        vdir = record_video_dir()
+        if vdir is not None:
+            from trailhead_agent.demo_browser import recording_demo_auto_enabled
+
+            print(f"  Recording video dir: {vdir}")
+            print(f"  Recording demo browser auto: {recording_demo_auto_enabled()} (headed + slow_mo unless TRAILHEAD_RECORDING_DEMO_AUTO=0)")
     return 0
 
 
@@ -226,6 +242,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run sf project deploy start (requires --project-dir; explicit opt-in)",
     )
     p_op.add_argument("--config", type=Path, default=None, help="Browser YAML when using --open-playground")
+    p_op.add_argument(
+        "--no-recording-demo-browser",
+        action="store_true",
+        help=(
+            "With TRAILHEAD_RECORD_VIDEO_DIR + --open-playground: skip auto headed browser / slow-mo / demo viewport "
+            "(CI). Same as TRAILHEAD_RECORDING_DEMO_AUTO=0."
+        ),
+    )
 
     return parser
 
@@ -254,7 +278,16 @@ def main(argv: list[str] | None = None) -> int:
         root = artifacts_dir.expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True)
         os.environ["TRAILHEAD_RECORD_VIDEO_DIR"] = str(root)
+        if getattr(args, "no_recording_demo_browser", False):
+            os.environ["TRAILHEAD_RECORDING_DEMO_AUTO"] = "0"
+        from trailhead_agent.demo_browser import bootstrap_recording_demo_environment
+
+        bootstrap_recording_demo_environment()
         log.info("e2e_artifacts_dir=%s", root)
+
+    art_resolved: Path | None = (
+        artifacts_dir.expanduser().resolve() if artifacts_dir is not None else None
+    )
 
     try:
         if args.command == "doctor":
@@ -276,6 +309,8 @@ def main(argv: list[str] | None = None) -> int:
                     agent_config_path=args.config,
                 )
             if args.org_command == "prepare":
+                if getattr(args, "no_recording_demo_browser", False):
+                    os.environ["TRAILHEAD_RECORDING_DEMO_AUTO"] = "0"
                 return run_org_prepare(
                     json_out=args.json,
                     org_alias=args.sf_org_alias,
@@ -303,6 +338,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "plan":
             if args.walk_ranked < 0 or args.walk_ranked > 100:
                 parser.error("--walk-ranked must be between 0 and 100")
+            narrate_plan_session(
+                start_url=start,
+                intent=intent,
+                label=args.label,
+                walk_ranked=args.walk_ranked,
+                artifacts_dir_resolved=art_resolved,
+                json_stdout=args.json,
+                config_path=getattr(args, "config", None),
+                trace_id=trace_id,
+            )
             plan = run_dry_plan(
                 cfg,
                 start_url=start,
@@ -319,6 +364,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "open-unit":
             if args.visit_count < 1 or args.visit_count > 100:
                 parser.error("--visit-count must be between 1 and 100")
+            narrate_open_unit_session(
+                start_url=start,
+                intent=intent,
+                visit_count=args.visit_count,
+                artifacts_dir_resolved=art_resolved,
+                trace_id=trace_id,
+            )
             ou = open_first_ranked_unit(
                 cfg,
                 start_url=start,
@@ -342,6 +394,10 @@ def main(argv: list[str] | None = None) -> int:
 
     except DiscoveryError as e:
         log.error("%s", e)
+        if getattr(e, "details", None):
+            for k, v in e.details.items():
+                if v:
+                    log.error("  %s: %s", k, v)
         for h in e.hints:
             log.error("  Hint: %s", h)
         return e.exit_code

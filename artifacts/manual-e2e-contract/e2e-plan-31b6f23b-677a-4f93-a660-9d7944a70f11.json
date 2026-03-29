@@ -1,0 +1,57 @@
+{
+  "saved_at_utc": "2026-03-29T16:53:24.354085+00:00",
+  "command": "plan",
+  "video_dir": "C:\\Users\\saima\\Downloads\\preconfigured-trailhead-agent\\artifacts\\manual-e2e-contract",
+  "video_files": [
+    {
+      "name": "plan-primary.webm",
+      "role": "primary",
+      "size_bytes": 7468627,
+      "mtime_utc": "2026-03-29T16:53:24.227713+00:00"
+    }
+  ],
+  "video_files_other_in_dir": [
+    {
+      "name": "org-prepare.webm",
+      "size_bytes": 2191789,
+      "mtime_utc": "2026-03-29T16:41:17.235359+00:00"
+    }
+  ],
+  "agent_version": "0.5.1",
+  "label": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+  "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+  "intent": "Hands-on Apex only",
+  "units": [
+    {
+      "title": "Get Started with Apex",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_intro",
+      "reason": "This unit provides the foundational introduction to Apex, essential for hands-on learning as requested by the intent."
+    },
+    {
+      "title": "Use sObjects",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_sobjects",
+      "reason": "Understanding sObjects is crucial for hands-on Apex development, as they are the primary way to interact with Salesforce data."
+    },
+    {
+      "title": "Manipulate Records with DML",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_dml",
+      "reason": "This unit focuses on hands-on DML operations, directly addressing the 'hands-on Apex' intent by teaching data manipulation."
+    },
+    {
+      "title": "Write SOQL Queries",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_soql",
+      "reason": "Learning SOQL is a core hands-on Apex skill for retrieving data, directly supporting the 'hands-on Apex' goal."
+    },
+    {
+      "title": "Write SOSL Queries",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_sosl",
+      "reason": "This unit covers SOSL, an advanced hands-on Apex querying technique, building upon SOQL for comprehensive data retrieval."
+    }
+  ],
+  "primary_video": "plan-primary.webm",
+  "e2e_session_videos": [
+    "plan-primary.webm"
+  ],
+  "trace_id": "31b6f23b-677a-4f93-a660-9d7944a70f11",
+  "duration_ms": 69945
+}

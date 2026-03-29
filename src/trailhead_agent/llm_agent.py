@@ -8,6 +8,7 @@ from typing import Any, Callable, TypeVar
 
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from trailhead_agent.demo_narration import demo_narration_enabled, narrate_llm_ranking_result, narrate_llm_ranking_start
 from trailhead_agent.errors import LLMProviderError
 from trailhead_agent.llm_errors import raise_mapped_llm_error
 from trailhead_agent.llm_schemas import (
@@ -545,9 +546,14 @@ def select_and_rank_units(*, intent: str, candidates: list[UnitRef]) -> list[Uni
         return []
 
     logger.info("pipeline_stage=orchestrator langgraph=1")
+    if demo_narration_enabled():
+        narrate_llm_ranking_start(intent=intent, candidates=candidates)
     try:
-        return run_ranking_graph(intent=intent, candidates=candidates)
+        out = run_ranking_graph(intent=intent, candidates=candidates)
     except LLMProviderError:
         raise
     except Exception as e:
         raise LLMProviderError(f"LangGraph ranking failed: {e}") from e
+    if demo_narration_enabled():
+        narrate_llm_ranking_result(out)
+    return out

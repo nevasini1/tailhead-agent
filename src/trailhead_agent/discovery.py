@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+from collections import Counter
 from urllib.parse import urljoin, urlparse
 
 from playwright.sync_api import Page
@@ -47,7 +48,78 @@ def _discovery_hints() -> list[str]:
         "Set TRAILHEAD_BROWSER_USER_DATA_DIR and run `trailhead-agent auth`, or log in manually in that profile.",
         "Use a Trail or module URL under /content/learn/ that lists units when you are logged in.",
         "Try TRAILHEAD_DISCOVERY_SCROLL_ROUNDS=8 if units load only after scrolling.",
+        "If the trail shows a Load more / Show more control, discovery will click it automatically (see TRAILHEAD_DISCOVERY_PAGINATION_CLICKS).",
+        "Try TRAILHEAD_DISCOVERY_NAV_WAIT_UNTIL=load if the TOC appears only after window.onload.",
     ]
+
+
+def _discovery_nav_wait_until() -> str:
+    v = os.environ.get("TRAILHEAD_DISCOVERY_NAV_WAIT_UNTIL", "domcontentloaded").strip().lower()
+    if v in ("domcontentloaded", "load", "commit"):
+        return v
+    return "domcontentloaded"
+
+
+def _pagination_max_clicks() -> int:
+    try:
+        return max(0, min(24, int(os.environ.get("TRAILHEAD_DISCOVERY_PAGINATION_CLICKS", "8"))))
+    except ValueError:
+        return 8
+
+
+def discovery_context_snapshot(page: Page) -> dict[str, str]:
+    """Structured context for logs / DiscoveryError (no secrets)."""
+    ctx: dict[str, str] = {}
+    try:
+        ctx["page_url"] = (page.url or "").strip()
+    except Exception:
+        ctx["page_url"] = ""
+    try:
+        ctx["page_title"] = (page.title() or "").strip()
+    except Exception:
+        ctx["page_title"] = ""
+    return ctx
+
+
+def expand_paginated_trailhead_lists(page: Page, *, max_clicks: int | None = None) -> int:
+    """
+    Click common Trailhead / LWC 'load more' patterns so anchors exist in the DOM.
+    Returns how many clicks succeeded.
+    """
+    limit = max_clicks if max_clicks is not None else _pagination_max_clicks()
+    if limit <= 0:
+        return 0
+    selectors = (
+        'button:has-text("Load more")',
+        'button:has-text("Show more")',
+        'a:has-text("Load more")',
+        'a:has-text("Show more")',
+        '[aria-label*="Load more" i]',
+        '[aria-label*="Show more" i]',
+        'button[aria-label*="more" i]',
+    )
+    total = 0
+    for _ in range(limit):
+        clicked = False
+        for sel in selectors:
+            loc = page.locator(sel).first
+            try:
+                if loc.count() == 0:
+                    continue
+                if not loc.is_visible():
+                    continue
+                loc.click(timeout=2500)
+                page.wait_for_timeout(min(1200, _wait_after_goto_ms()))
+                total += 1
+                clicked = True
+                break
+            except Exception as e:
+                logger.debug("pagination click skip %s: %s", sel, e)
+        if not clicked:
+            break
+    if total:
+        logger.info("discovery pagination clicks=%d", total)
+    return total
 
 
 def detect_discovery_blockers(page: Page) -> str | None:
@@ -75,6 +147,8 @@ def detect_discovery_blockers(page: Page) -> str | None:
         title = ""
     if title.startswith("log in") or title in ("login", "sign in") or "sign in to salesforce" in title:
         return "The page title indicates a sign-in screen, not a Trailhead learn page."
+    if "sign in" in title and "trailhead" not in title:
+        return "The page title looks like a generic sign-in page, not Trailhead module content."
 
     try:
         body = (page.locator("body").inner_text(timeout=8000) or "").lower()
@@ -88,6 +162,14 @@ def detect_discovery_blockers(page: Page) -> str | None:
         "temporarily unavailable",
         "something went wrong",
         "enable javascript",
+        "sign in to continue",
+        "log in to continue",
+        "you must log in",
+        "session expired",
+        "page not found",
+        "404",
+        "captcha",
+        "verify you are human",
     )
     for snip in snippets:
         if snip in body[:6000]:
@@ -217,6 +299,8 @@ def discover_units_on_page(page: Page, module_or_trail_url: str) -> list[UnitRef
         try:
             href = a.get_attribute("href")
             title = (a.inner_text() or "").strip()
+            if not title:
+                title = (a.get_attribute("aria-label") or "").strip()
             title = re.sub(r"\s+", " ", title)
             norm = _normalize_trailhead_url(module_or_trail_url, href or "")
             if not norm or not title:
@@ -228,15 +312,41 @@ def discover_units_on_page(page: Page, module_or_trail_url: str) -> list[UnitRef
     return list(seen.values())
 
 
+def _units_look_degenerate(units: list[UnitRef]) -> str | None:
+    """Return a human message if the scrape looks like layout noise, not a real TOC."""
+    if not units:
+        return None
+    titles = [u.title.strip() for u in units]
+    if all(len(t) < 2 for t in titles):
+        return (
+            "Every collected link has an empty or trivial title. "
+            "The page is probably not rendering the real Trailhead unit list (login wall, skeleton UI, or DOM change)."
+        )
+    if len(titles) >= 5:
+        top_n, top_count = Counter(titles).most_common(1)[0]
+        if top_count / len(titles) >= 0.85 and len(top_n) <= 40:
+            return (
+                f"Most links share the same title ({top_n!r}), so discovery likely grabbed the wrong anchors "
+                f"({top_count}/{len(titles)}). Try another start URL or increase waits / scroll rounds."
+            )
+    return None
+
+
 def collect_units_for_seed(page: Page, seed_url: str) -> list[UnitRef]:
     wait_ms = _wait_after_goto_ms()
     max_mod = _max_modules_to_crawl()
-    page.goto(seed_url, wait_until="domcontentloaded")
+    nav_wait = _discovery_nav_wait_until()
+    page.goto(seed_url, wait_until=nav_wait)
     page.wait_for_timeout(wait_ms)
+    expand_paginated_trailhead_lists(page)
 
     blocked = detect_discovery_blockers(page)
     if blocked:
-        raise DiscoveryError(blocked, hints=_discovery_hints())
+        raise DiscoveryError(
+            blocked,
+            hints=_discovery_hints(),
+            details=discovery_context_snapshot(page),
+        )
 
     if is_trail_url(seed_url):
         modules = discover_module_roots_including_lazy(page, seed_url)
@@ -245,11 +355,13 @@ def collect_units_for_seed(page: Page, seed_url: str) -> list[UnitRef]:
                 f"No module links found on trail page after scrolling ({max_mod} max). "
                 f"The trail layout may have changed, or content is hidden until login.",
                 hints=_discovery_hints(),
+                details=discovery_context_snapshot(page),
             )
         by_href: dict[str, UnitRef] = {}
         for mod_url in modules:
-            page.goto(mod_url, wait_until="domcontentloaded")
+            page.goto(mod_url, wait_until=nav_wait)
             page.wait_for_timeout(wait_ms)
+            expand_paginated_trailhead_lists(page)
             sub = detect_discovery_blockers(page)
             if sub:
                 logger.warning("Skipping module %s: %s", mod_url, sub)
@@ -261,8 +373,13 @@ def collect_units_for_seed(page: Page, seed_url: str) -> list[UnitRef]:
                 "Visited trail modules but collected zero unit links. "
                 "Every module page may be behind a login wall or returned an error.",
                 hints=_discovery_hints(),
+                details=discovery_context_snapshot(page),
             )
-        return list(by_href.values())
+        merged = list(by_href.values())
+        bad = _units_look_degenerate(merged)
+        if bad:
+            raise DiscoveryError(bad, hints=_discovery_hints(), details=discovery_context_snapshot(page))
+        return merged
 
     units = discover_units_including_lazy(page, seed_url)
     if not units:
@@ -270,5 +387,9 @@ def collect_units_for_seed(page: Page, seed_url: str) -> list[UnitRef]:
             "No Trailhead unit links matched on this page after scrolling. "
             "If this is a module overview, confirm you are not on a login or marketing page.",
             hints=_discovery_hints(),
+            details=discovery_context_snapshot(page),
         )
+    bad = _units_look_degenerate(units)
+    if bad:
+        raise DiscoveryError(bad, hints=_discovery_hints(), details=discovery_context_snapshot(page))
     return units

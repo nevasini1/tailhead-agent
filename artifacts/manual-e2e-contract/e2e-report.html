@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>trailhead-agent · E2E artifacts</title>
+  <style>
+:root {
+  --bg: #0f172a;
+  --bg2: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --card: #1e293b;
+  --border: #334155;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, "Segoe UI", sans-serif;
+  background: linear-gradient(165deg, var(--bg), var(--bg2));
+  color: var(--text);
+  margin: 0;
+  min-height: 100vh;
+  padding: 1.75rem clamp(1rem, 4vw, 2.5rem);
+  line-height: 1.5;
+}
+h1 {
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  margin: 0 0 0.35rem;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.65rem;
+  display: inline-block;
+}
+.lead { color: var(--muted); max-width: 52rem; margin: 0.75rem 0 1.5rem; }
+.folder { font-size: 0.8rem; color: var(--muted); word-break: break-all; margin-bottom: 2rem; }
+h2 {
+  font-size: 1.05rem;
+  margin: 2rem 0 1rem;
+  color: var(--accent);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: 1.25rem;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+.card-hd { padding: 1rem 1rem 0.5rem; }
+.chip {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+.badge-primary { background: #0ea5e9; color: #0f172a; }
+.badge-session { background: #475569; color: #f1f5f9; }
+.badge-org { background: #a78bfa; color: #1e1b4b; }
+.badge-open { background: #34d399; color: #064e3b; }
+.badge-extra { background: #64748b; color: #f8fafc; }
+.fname { display: block; font-size: 0.9rem; margin: 0.35rem 0; word-break: break-all; }
+.sub { font-size: 0.85rem; color: var(--muted); margin: 0.25rem 0; }
+.meta { font-size: 0.75rem; color: var(--muted); margin: 0.5rem 0 0; }
+.vid {
+  width: 100%;
+  display: block;
+  background: #000;
+  max-height: 240px;
+}
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-left: 3px solid var(--border);
+  margin-left: 0.75rem;
+}
+.step {
+  position: relative;
+  padding: 0 0 1.25rem 1.5rem;
+}
+.step-num {
+  position: absolute;
+  left: -0.6rem;
+  top: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+}
+.step-body strong { color: #f8fafc; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+.step-row { font-size: 0.85rem; margin-top: 0.35rem; }
+.ext { color: var(--accent); }
+ul.files { margin: 0; padding-left: 1.2rem; }
+ul.files li { margin: 0.35rem 0; }
+ul.files a { color: var(--accent); }
+.empty { color: var(--muted); max-width: 40rem; }
+code { font-size: 0.88em; background: rgba(0,0,0,.25); padding: 0.1em 0.35em; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>trailhead-agent · E2E folder</h1>
+  <p class="lead">
+    Recordings and JSON sidecars in this folder. Videos use relative paths — open this file in a browser.
+  </p>
+  <p class="folder">C:\Users\saima\Downloads\preconfigured-trailhead-agent\artifacts\manual-e2e-contract</p>
+
+  <h2>Recordings</h2>
+  <div class="grid">
+<article class="card">
+  <header class="card-hd">
+    <span class="chip badge-org">org prepare · primary</span>
+    <code class="fname">org-prepare.webm</code>
+    <p class="sub">Browser open to Trailhead (org prepare).</p>
+    <p class="meta">4.8 MB · 2026-03-29 17:32 UTC</p>
+  </header>
+  <video class="vid" controls preload="metadata" src="org-prepare.webm">
+    Your browser cannot play this WebM inline; open <code>org-prepare.webm</code> directly.
+  </video>
+</article>
+<article class="card">
+  <header class="card-hd">
+    <span class="chip badge-primary">plan · primary</span>
+    <code class="fname">plan-primary.webm</code>
+    <p class="sub">Discovery and LLM-ranked plan.</p>
+    <p class="meta">15.3 MB · 2026-03-29 17:31 UTC</p>
+  </header>
+  <video class="vid" controls preload="metadata" src="plan-primary.webm">
+    Your browser cannot play this WebM inline; open <code>plan-primary.webm</code> directly.
+  </video>
+</article>
+  </div>
+
+  <h2>Run order (manifest)</h2>
+<ol class='timeline'>
+<li class="step">
+  <span class="step-num">1</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">2</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">3</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">4</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">5</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">6</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">7</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">8</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">9</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">10</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">11</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">12</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">13</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">14</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">15</span>
+  <div class="step-body">
+    <strong>plan</strong> <span class="muted">(plan)</span>
+    <div class="step-row">Video: <code>plan-primary.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+<li class="step">
+  <span class="step-num">16</span>
+  <div class="step-body">
+    <strong>org_prepare</strong> <span class="muted">(org prepare)</span>
+    <div class="step-row">Video: <code>org-prepare.webm</code></div>
+    <div class="step-row">URL: <a class="ext" href="https://trailhead.salesforce.com/content/learn/modules/apex_database">https://trailhead.salesforce.com/content/learn/modules/apex_database</a></div>
+  </div>
+</li>
+</ol>
+
+  <h2>JSON</h2>
+  <ul class="files">
+<li><a href="e2e-manifest.json">e2e-manifest.json</a></li>
+<li><a href="e2e-org-prepare-latest.json">e2e-org-prepare-latest.json</a></li>
+<li><a href="e2e-plan-2b67bbcb-f349-4169-a76a-13b9ae18e14a.json">e2e-plan-2b67bbcb-f349-4169-a76a-13b9ae18e14a.json</a></li>
+<li><a href="e2e-plan-2bdb215c-3ee2-4a63-acc9-45de33325b39.json">e2e-plan-2bdb215c-3ee2-4a63-acc9-45de33325b39.json</a></li>
+<li><a href="e2e-plan-31b6f23b-677a-4f93-a660-9d7944a70f11.json">e2e-plan-31b6f23b-677a-4f93-a660-9d7944a70f11.json</a></li>
+<li><a href="e2e-plan-6272fc95-6c50-4f38-a5fa-a24a03c13399.json">e2e-plan-6272fc95-6c50-4f38-a5fa-a24a03c13399.json</a></li>
+<li><a href="e2e-plan-cc9ee619-be95-4521-93c3-7a4088905a22.json">e2e-plan-cc9ee619-be95-4521-93c3-7a4088905a22.json</a></li>
+<li><a href="e2e-plan-defaf042-9e89-48aa-a5bb-02e930d8a24e.json">e2e-plan-defaf042-9e89-48aa-a5bb-02e930d8a24e.json</a></li>
+<li><a href="e2e-plan-df51e98c-4ff4-435b-9a8c-ef79fe1b40be.json">e2e-plan-df51e98c-4ff4-435b-9a8c-ef79fe1b40be.json</a></li>
+<li><a href="e2e-plan-f8bdc18b-0880-49a2-9bb0-cc3d8de87921.json">e2e-plan-f8bdc18b-0880-49a2-9bb0-cc3d8de87921.json</a></li>
+<li><a href="e2e-plan-latest.json">e2e-plan-latest.json</a></li>
+  </ul>
+</body>
+</html>

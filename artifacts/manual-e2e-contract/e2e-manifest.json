@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "recordings": [
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "f8bdc18b-0880-49a2-9bb0-cc3d8de87921",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T13:20:13.533120+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "8b835c9c-2c97-4edb-bd2a-a242ae701c5b",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T13:21:07.174606+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "acb1d34b-d4ed-4948-acbd-f9c19b42d4d1",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:04:04.396477+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "b5dc584c-87f8-433d-b771-588d75b9f659",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:08:04.622513+00:00"
+    },
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "cc9ee619-be95-4521-93c3-7a4088905a22",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:20:43.433875+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "2566f88d-44d2-4fb5-9fb0-d7a19e2bdf5a",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:21:09.626777+00:00"
+    },
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "6272fc95-6c50-4f38-a5fa-a24a03c13399",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:31:19.801446+00:00"
+    },
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "2bdb215c-3ee2-4a63-acc9-45de33325b39",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:40:43.951094+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "b756cfe3-5708-4240-9804-41cd55622aac",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:41:17.395724+00:00"
+    },
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "31b6f23b-677a-4f93-a660-9d7944a70f11",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:53:24.355290+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "c7d2a0c2-0450-4fb4-84b6-1a658934fbd2",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T16:54:08.001683+00:00"
+    },
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "2b67bbcb-f349-4169-a76a-13b9ae18e14a",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T17:04:06.981090+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "5672cdaf-93ea-454e-a080-7e20c4ff1a00",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T17:04:50.149577+00:00"
+    },
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "defaf042-9e89-48aa-a5bb-02e930d8a24e",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T17:16:44.673769+00:00"
+    },
+    {
+      "source": "plan",
+      "command": "plan",
+      "trace_id": "df51e98c-4ff4-435b-9a8c-ef79fe1b40be",
+      "primary_video": "plan-primary.webm",
+      "new_videos": [
+        "plan-primary.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T17:31:24.918681+00:00"
+    },
+    {
+      "source": "org_prepare",
+      "command": "org prepare",
+      "trace_id": "6ca520a1-062d-4e02-b118-7f7b3b867bd2",
+      "primary_video": "org-prepare.webm",
+      "new_videos": [
+        "org-prepare.webm"
+      ],
+      "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+      "saved_at_utc": "2026-03-29T17:32:15.005427+00:00"
+    }
+  ],
+  "video_dir": "C:\\Users\\saima\\Downloads\\preconfigured-trailhead-agent\\artifacts\\manual-e2e-contract",
+  "updated_at_utc": "2026-03-29T17:32:15.005438+00:00"
+}

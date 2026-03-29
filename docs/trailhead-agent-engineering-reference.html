@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>trailhead-agent — engineering reference</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body {
+      font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #111;
+      background: #fff;
+      font-size: 10.5pt;
+      line-height: 1.42;
+      max-width: 190mm;
+      margin: 0 auto;
+      padding: 10mm 12mm 16mm;
+    }
+    h1 { font-size: 13pt; margin: 1.2em 0 0.35em; border-bottom: 2px solid #0369a1; padding-bottom: 0.2em; }
+    h2 { font-size: 11pt; margin: 0.9em 0 0.3em; color: #0369a1; }
+    p, li { margin: 0.3em 0; }
+    ul { margin: 0.25em 0 0.5em 1.1em; }
+    .cover { text-align: center; margin-bottom: 1.5em; }
+    .cover h1 { border: none; font-size: 17pt; margin: 0 0 0.25em; }
+    .meta { font-size: 9.5pt; color: #444; }
+    pre {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 8.5pt;
+      background: #f4f4f5;
+      border: 1px solid #d4d4d8;
+      padding: 0.5em 0.7em;
+      white-space: pre-wrap;
+      margin: 0.45em 0;
+    }
+    code { font-family: ui-monospace, Consolas, monospace; font-size: 0.92em; }
+    @media print { body { padding: 0; max-width: none; } }
+  </style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>trailhead-agent</h1>
+  <div class="meta" style="font-weight:600;font-size:11pt;">Engineering reference (CLI, pipeline, recording)</div>
+  <p class="meta">Version 0.5.1</p>
+</div>
+
+<h1>1. Scope</h1>
+<ul>
+  <li><strong>IN:</strong> Playwright discovery of Trailhead <code>/content/learn/</code> unit links; LLM ordering under user intent (allowlisted hrefs); optional ranked URL walk; org checklist/prepare; <code>.webm</code> + JSON artifacts.</li>
+  <li><strong>OUT:</strong> Quiz submission, auto Launch Playground, arbitrary non-Trailhead crawling.</li>
+</ul>
+
+<h1>2. Runtime stack</h1>
+<pre>Python 3.11+
+playwright (Chromium)
+langgraph + langchain-core (ranking graph)
+pydantic (LLM JSON validation)
+openai SDK (+ optional anthropic / google-genai extras)</pre>
+
+<h1>3. Entrypoints</h1>
+<p>Console: <code>trailhead-agent</code> (<code>trailhead_agent.cli:entrypoint</code>). Module: <code>python -m trailhead_agent &lt;subcommand&gt;</code></p>
+<pre>doctor
+plan [--artifacts-dir|--save-e2e] [--walk-ranked N] [--json] ...
+open-unit [--visit-count N] ...
+auth
+org doctor | org checklist | org prepare</pre>
+
+<h1>4. CLI matrix</h1>
+<pre>doctor              env/keys, executor, sf on PATH, recording dir hint
+plan                discovery + LangGraph rank + optional walk; e2e JSON + .webm
+open-unit           same rank path; goto first N ranked units only
+auth                persistent Chromium profile for SSO
+org doctor          sf org display JSON summary
+org checklist       Markdown/JSON steps from plan JSON or unit href
+org prepare         noop/cli executor checks; optional --open-playground browser</pre>
+
+<h1>5. plan / open-unit shared flags</h1>
+<pre>--config PATH              YAML browser/selectors
+--artifacts-dir DIR        mkdir; sets TRAILHEAD_RECORD_VIDEO_DIR
+--save-e2e                 shorthand artifacts/e2e
+--no-recording-demo-browser -&gt; TRAILHEAD_RECORDING_DEMO_AUTO=0
+--start-url / --intent     or TRAILHEAD_* env</pre>
+
+<h1>6. Data flow: plan while recording</h1>
+<pre>1. demo_plan_what_you_asked (titlecard P1)
+2. collect_units_for_seed(page, start_url)
+3. demo_after_discovery (titlecard P2)
+4. select_and_rank_units -&gt; run_ranking_graph
+5. demo_llm_ranking_output_slide (titlecard P3)
+6. demo_after_llm_rank (titlecard P4)
+7. walk_ranked_units_for_recording if --walk-ranked &gt; 0 (titlecard P5)
+8. _plan_recording_epilogue (live Trailhead + end card)</pre>
+
+<h1>6b. Title cards</h1>
+<pre>plan: P1 inputs | P2 discovery | P3 LLM ordered list | P4 next steps | P5 walk | end card
+org prepare: 5 slides then module URL + corner tag + end card</pre>
+
+<h1>7. LangGraph ranking</h1>
+<pre>START -&gt; prepare -&gt; planner (optional LLM_PLANNER_PHASE=1)
+      -&gt; rank_primary -&gt; rank_repair OR finalize -&gt; END</pre>
+
+<h1>8. Key modules</h1>
+<pre>cli.py              argparse, trace_id, artifacts-dir bootstrap
+runner.py           run_dry_plan, open_first_ranked_unit, walk, epilogue
+discovery.py        unit links, DiscoveryError
+llm_agent.py        providers, select_and_rank_units
+ranking_graph.py    LangGraph compile + run_ranking_graph
+session.py          TrailheadBrowser, Playwright video
+e2e_artifacts.py    JSON, friendly .webm rename, manifest
+e2e_viewer.py       e2e-report.html
+demo_titlecards.py  data-URL slides
+demo_narration.py   stderr narration
+demo_browser.py     headed/slow_mo when recording
+org_commands.py     prepare / checklist / doctor</pre>
+
+<h1>9. Artifact files</h1>
+<pre>plan-primary.webm | open-unit-primary.webm | org-prepare.webm
+e2e-plan-&lt;trace&gt;.json, e2e-plan-latest.json
+e2e-open-unit-latest.json
+e2e-org-prepare-latest.json, e2e-manifest.json, e2e-report.html</pre>
+
+<h1>10. Environment variables</h1>
+<pre>LLM_PROVIDER, OPENAI_* | GOOGLE_* / GEMINI_* | ANTHROPIC_*
+LLM_PLANNER_PHASE, LLM_RANKING_REPAIR
+TRAILHEAD_START_URL, TRAILHEAD_INTENT
+TRAILHEAD_RECORD_VIDEO_DIR, TRAILHEAD_RECORDING_DEMO_AUTO
+TRAILHEAD_DEMO_TITLECARDS, TRAILHEAD_DEMO_TITLECARD_MS, TRAILHEAD_DEMO_TITLECARD_RANK_MAX
+TRAILHEAD_DEMO_NARRATION, TRAILHEAD_DEMO_SLOW_MO_MS, TRAILHEAD_AGENT_HEADLESS
+TRAILHEAD_PLAN_RECORDING_TAIL_MIN_MS, TRAILHEAD_ORG_PREPARE_RECORDING_MIN_MS
+TRAILHEAD_PAGE_SETTLE_MS, TRAILHEAD_DISCOVERY_*, TRAILHEAD_SHELL_WAIT_TIMEOUT_MS
+TRAILHEAD_ORG_EXECUTOR, TRAILHEAD_SF_ORG_ALIAS</pre>
+
+<h1>11. Errors / exit codes</h1>
+<pre>DiscoveryError      scrape failure; details + hints
+UrlValidationError  URL policy
+LLMProviderError    API/schema
+ConfigurationError  YAML/env
+OrgExecutorError    org/sf integration
+KeyboardInterrupt   130</pre>
+
+<h1>12. Verification</h1>
+<pre>pytest tests
+(TRAILHEAD_DEMO_NARRATION=0 in tests/conftest.py)</pre>
+
+<h1>13. PDF generation</h1>
+<p><strong>Preferred:</strong> open this HTML file in Chrome/Edge, <strong>Ctrl+P</strong>, <strong>Save as PDF</strong>. See <code>HOW_TO_SAVE_PDF.md</code>.</p>
+<p><strong>Optional:</strong> <code>pip install -e ".[docs]"</code> then <code>python scripts/generate_engineering_pdf.py</code> (fpdf2; some viewers render poorly).</p>
+
+<h1>14. Demo recording contract</h1>
+<p>Example: module <code>apex_database</code>, intent <code>Hands-on Apex only</code>, <code>--walk-ranked 2</code>; org prepare with same <code>start_url</code> and <code>TRAILHEAD_RECORD_VIDEO_DIR</code> on the artifacts directory.</p>
+
+<p class="meta" style="margin-top:2em;">Ctrl+P → Save as PDF</p>
+
+</body>
+</html>

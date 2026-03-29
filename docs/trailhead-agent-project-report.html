@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>trailhead-agent — project report</title>
+  <style>
+    @page { size: A4; margin: 16mm; }
+    body {
+      font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #111;
+      background: #fff;
+      font-size: 10.5pt;
+      line-height: 1.42;
+      max-width: 190mm;
+      margin: 0 auto;
+      padding: 8mm 10mm 14mm;
+    }
+    h1 { font-size: 14pt; margin: 1.25em 0 0.35em; border-bottom: 2px solid #0c4a6e; padding-bottom: 0.2em; page-break-after: avoid; }
+    h2 { font-size: 11pt; margin: 0.85em 0 0.3em; color: #0c4a6e; page-break-after: avoid; }
+    h3 { font-size: 10pt; margin: 0.65em 0 0.25em; color: #334155; }
+    p, li { margin: 0.3em 0; }
+    ul { margin: 0.25em 0 0.5em 1.1em; padding: 0; }
+    .cover { text-align: center; margin-bottom: 1.5em; }
+    .cover h1 { border: none; font-size: 17pt; margin: 0 0 0.25em; }
+    .cover .sub { font-size: 11pt; font-weight: 600; }
+    .meta { font-size: 9.5pt; color: #444; font-style: italic; }
+    pre {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 8pt;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 0.5em 0.65em;
+      white-space: pre-wrap;
+      margin: 0.45em 0;
+      line-height: 1.35;
+    }
+    pre.dense { font-size: 7.5pt; }
+    code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 0.5em 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.35em 0.5em; text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; }
+    .figure { margin: 0.75em 0; text-align: center; page-break-inside: avoid; }
+    .figure svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    .figcap { font-size: 8.5pt; color: #475569; margin: 0.35em 0 0.6em; text-align: center; }
+    .swim { display: flex; flex-wrap: wrap; gap: 0.35em; justify-content: center; align-items: stretch; margin: 0.5em 0; font-size: 8pt; }
+    .swim .box { border: 2px solid #0ea5e9; background: #e0f2fe; padding: 0.35em 0.5em; border-radius: 6px; max-width: 7.5em; text-align: center; line-height: 1.25; }
+    .swim .box.org { border-color: #7c3aed; background: #ede9fe; }
+    .swim .arr { align-self: center; color: #64748b; font-weight: bold; }
+    @media print {
+      body { padding: 0; max-width: none; font-size: 10pt; }
+      h1 { page-break-before: auto; }
+      pre, table, .figure { page-break-inside: avoid; }
+      a { color: #000; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>trailhead-agent</h1>
+  <div class="sub">Project report: architecture, threat model, impact, novelties, research</div>
+  <p class="meta">Version 0.5.1 &nbsp;|&nbsp; Sources: README.md, DESIGN.md, src/trailhead_agent</p>
+</div>
+
+<p><strong>Disclaimer:</strong> Engineering / product narrative. Not peer-reviewed research. Deep sections synthesize design docs and implementation intent.</p>
+
+<h1>1. Executive summary</h1>
+<p><strong>What it is:</strong> A Python CLI that combines (A) <strong>Playwright</strong> discovery of Trailhead <code>/content/learn/</code> unit links under strict URL policy, (B) <strong>LLM ranking</strong> with Pydantic-validated JSON and <strong>href allowlisting</strong> (no invented URLs), orchestrated by a mandatory <strong>LangGraph</strong> graph with optional planner and repair passes, and (C) optional <strong>org</strong> helpers (YAML checklists, <code>sf</code> visibility via <code>CliOrgExecutor</code>, <code>org prepare --open-playground</code> for browser + human Launch Playground).</p>
+<p><strong>Explicit non-goals:</strong> Auto-submit quizzes, credential stuffing, automatic Launch Playground clicks, crawling outside allowed Trailhead paths.</p>
+<ul>
+  <li><strong>Observability:</strong> <code>trace_id</code>, <code>duration_ms</code>, <code>agent_version</code>; <code>--log-json</code>; E2E JSON + <code>.webm</code> + <code>e2e-report.html</code>.</li>
+  <li><strong>Demos:</strong> Title-card phases (inputs, discovery, LLM order slide, next steps, walk); stderr narration (<code>TRAILHEAD_DEMO_NARRATION</code>).</li>
+</ul>
+
+<h1>2. Goals and problem fit</h1>
+<ul>
+  <li><strong>Assist</strong> learners with <strong>navigation and prioritization</strong> using natural-language intent.</li>
+  <li><strong>Do not</strong> automate quizzes, knowledge checks, or credential abuse.</li>
+  <li><strong>Separate concerns:</strong> browser discovery vs. LLM reasoning vs. future Salesforce org automation.</li>
+</ul>
+
+<h1>3. Stakeholders and value</h1>
+<pre>Learners        Intent-ordered queue (e.g. hands-on-first) vs. scanning long TOCs manually
+Demos / L&D     Reproducible plan-primary vs org-prepare clips + JSON for narrative
+Operators       Bounded URLs, exit codes, headless CI, JSON logs for pipelines
+Extensibility   OrgExecutor protocol: noop today, cli/sf hooks without rewriting ranker</pre>
+
+<h1>4. Layered architecture</h1>
+<table>
+  <tr><th>Layer</th><th>Responsibility</th></tr>
+  <tr><td>CLI</td><td>Argparse; <code>--json</code> / <code>--log-json</code>; per-run <code>trace_id</code> in context; artifacts-dir sets <code>TRAILHEAD_RECORD_VIDEO_DIR</code></td></tr>
+  <tr><td>Validation</td><td><code>validate_start_url()</code>: HTTPS, <code>TRAILHEAD_ALLOWED_HOST</code>, path must include <code>/content/learn/</code></td></tr>
+  <tr><td>Session</td><td>Chromium via Playwright; optional <code>TRAILHEAD_BROWSER_USER_DATA_DIR</code> + <code>auth</code> for SSO; optional email/password env login</td></tr>
+  <tr><td>Discovery</td><td>Scroll rounds, optional pagination clicks, nav wait policy; <code>detect_discovery_blockers()</code>; <code>DiscoveryError</code> with <code>details</code> (page URL/title) before LLM</td></tr>
+  <tr><td>LLM</td><td><code>llm_schemas</code> + allowlist materialization; LangGraph: prepare → planner? → rank_primary → rank_repair? → finalize</td></tr>
+  <tr><td>Org</td><td><code>org_executor</code> protocol; <code>org_checklists.yaml</code>; human-in-the-loop prepare and checklist commands</td></tr>
+</table>
+
+<h2>4.1 Logical component map</h2>
+<div class="figure" role="img" aria-label="Component diagram">
+<svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,Segoe UI,sans-serif" font-size="11">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#64748b"/></marker>
+  </defs>
+  <rect x="260" y="8" width="200" height="36" rx="6" fill="#0ea5e9" stroke="#0369a1" stroke-width="1.5"/>
+  <text x="360" y="31" text-anchor="middle" fill="#0f172a" font-weight="700">CLI entrypoint</text>
+  <rect x="280" y="58" width="160" height="32" rx="5" fill="#e2e8f0" stroke="#64748b"/>
+  <text x="360" y="78" text-anchor="middle" fill="#0f172a">validate_start_url</text>
+  <line x1="360" y1="44" x2="360" y2="56" stroke="#64748b" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="40" y="118" width="150" height="70" rx="6" fill="#cffafe" stroke="#0891b2"/>
+  <text x="115" y="142" text-anchor="middle" fill="#0f172a" font-weight="700">Playwright</text>
+  <text x="115" y="158" text-anchor="middle" fill="#334155" font-size="10">Chromium session</text>
+  <text x="115" y="176" text-anchor="middle" fill="#334155" font-size="10">Discovery DOM</text>
+  <rect x="265" y="118" width="190" height="70" rx="6" fill="#fef3c7" stroke="#d97706"/>
+  <text x="360" y="142" text-anchor="middle" fill="#0f172a" font-weight="700">LangGraph</text>
+  <text x="360" y="158" text-anchor="middle" fill="#334155" font-size="10">prepare / planner / rank</text>
+  <text x="360" y="176" text-anchor="middle" fill="#334155" font-size="10">repair / finalize</text>
+  <rect x="530" y="118" width="150" height="70" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="605" y="142" text-anchor="middle" fill="#0f172a" font-weight="700">Outputs</text>
+  <text x="605" y="158" text-anchor="middle" fill="#334155" font-size="10">RunPlan JSON</text>
+  <text x="605" y="176" text-anchor="middle" fill="#334155" font-size="10">.webm / manifest</text>
+  <line x1="360" y1="90" x2="115" y2="116" stroke="#64748b" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="360" y1="90" x2="360" y2="116" stroke="#64748b" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="455" y1="153" x2="528" y2="153" stroke="#64748b" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="230" y="210" width="260" height="58" rx="6" fill="#ede9fe" stroke="#7c3aed"/>
+  <text x="360" y="232" text-anchor="middle" fill="#0f172a" font-weight="700">Org subsystem</text>
+  <text x="360" y="250" text-anchor="middle" fill="#334155" font-size="10">OrgExecutor · checklists · org prepare</text>
+  <line x1="360" y1="188" x2="360" y2="208" stroke="#64748b" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="368" y="202" fill="#64748b" font-size="9">parallel concern</text>
+</svg>
+</div>
+<p class="figcap">Figure 1 — Browser path feeds candidates; graph ranks; artifacts persist. Org is adjacent, not inside the ranker.</p>
+
+<h2>4.2 LangGraph ranking flow</h2>
+<div class="figure">
+<svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,Segoe UI,sans-serif" font-size="10">
+  <defs>
+    <marker id="m" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#475569"/></marker>
+  </defs>
+  <rect x="20" y="85" width="88" height="38" rx="5" fill="#e0f2fe" stroke="#0284c7"/>
+  <text x="64" y="108" text-anchor="middle">prepare</text>
+  <line x1="108" y1="104" x2="138" y2="104" stroke="#475569" marker-end="url(#m)"/>
+  <rect x="140" y="85" width="88" height="38" rx="5" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="184" y="102" text-anchor="middle">planner</text>
+  <text x="184" y="114" text-anchor="middle" font-size="8">optional</text>
+  <line x1="228" y1="104" x2="258" y2="104" stroke="#475569" marker-end="url(#m)"/>
+  <rect x="260" y="85" width="100" height="38" rx="5" fill="#fef9c3" stroke="#ca8a04"/>
+  <text x="310" y="108" text-anchor="middle">rank_primary</text>
+  <line x1="360" y1="104" x2="395" y2="104" stroke="#475569" marker-end="url(#m)"/>
+  <path d="M400 80 L460 80 L490 104 L460 128 L400 128 Z" fill="#fce7f3" stroke="#db2777"/>
+  <text x="445" y="100" text-anchor="middle" font-size="9">needs</text>
+  <text x="445" y="112" text-anchor="middle" font-size="9">repair?</text>
+  <line x1="490" y1="104" x2="525" y2="104" stroke="#475569" marker-end="url(#m)"/>
+  <rect x="528" y="85" width="88" height="38" rx="5" fill="#ffedd5" stroke="#ea580c"/>
+  <text x="572" y="108" text-anchor="middle">rank_repair</text>
+  <line x="445" y1="128" x2="445" y2="168" stroke="#475569"/>
+  <line x1="445" y1="168" x2="572" y2="168" stroke="#475569"/>
+  <line x1="572" y1="168" x2="572" y2="128" stroke="#475569" marker-end="url(#m)"/>
+  <text x="500" y="162" font-size="9" fill="#475569">no</text>
+  <text x="520" y="72" font-size="9" fill="#475569">yes</text>
+  <rect x="300" y="178" width="90" height="34" rx="5" fill="#d1fae5" stroke="#059669"/>
+  <text x="345" y="198" text-anchor="middle">finalize</text>
+  <line x1="445" y1="128" x2="345" y2="178" stroke="#475569" marker-end="url(#m)"/>
+  <text x="365" y="158" font-size="9" fill="#475569">no</text>
+  <line x1="572" y1="123" x2="360" y2="178" stroke="#475569" marker-end="url(#m)"/>
+  <text x="480" y="138" font-size="9" fill="#475569">after repair</text>
+</svg>
+</div>
+<p class="figcap">Figure 2 — Conditional repair loop; planner skipped unless LLM_PLANNER_PHASE=1.</p>
+
+<h2>4.3 Plan command vs org prepare</h2>
+<div class="swim" aria-label="Plan versus org prepare">
+  <div class="box">P1 inputs</div><span class="arr">→</span>
+  <div class="box">P2 discovery</div><span class="arr">→</span>
+  <div class="box">P3 LLM order</div><span class="arr">→</span>
+  <div class="box">P4 next</div><span class="arr">→</span>
+  <div class="box">P5 walk</div><span class="arr">→</span>
+  <div class="box">Trailhead UI</div>
+</div>
+<p class="figcap">Plan recording — cyan title-card phases; includes LangGraph.</p>
+<div class="swim">
+  <div class="box org">Slide 1</div><span class="arr">→</span>
+  <div class="box org">…</div><span class="arr">→</span>
+  <div class="box org">Slide 5</div><span class="arr">→</span>
+  <div class="box org">Module URL</div><span class="arr">→</span>
+  <div class="box org">Corner tag</div><span class="arr">→</span>
+  <div class="box org">End card</div>
+</div>
+<p class="figcap">Org prepare — purple slides; no ranking; human Launch Playground.</p>
+
+<h2>4.4 E2E artifact layout</h2>
+<pre class="dense">ARTIFACTS_DIR/
+├── plan-primary.webm              main plan session video
+├── org-prepare.webm               org prepare browser clip
+├── open-unit-primary.webm         open-unit primary clip
+├── plan-session-01.webm           optional sidecars
+├── e2e-plan-&lt;trace_id&gt;.json       one plan run
+├── e2e-plan-latest.json           symlink to latest semantics
+├── e2e-open-unit-latest.json
+├── e2e-org-prepare-latest.json    org run summary + demo_guide
+├── e2e-manifest.json              append-only recording index
+└── e2e-report.html                gallery viewer</pre>
+
+<h2>4.5 End-to-end data flow</h2>
+<pre>start_url
+  -> Playwright: collect_units_for_seed -> List[UnitRef] (title, href; reason empty from scrape)
+  -> LangGraph.invoke: intent + candidates as dict rows
+  -> Optional planner notes merged into payload (LLM_PLANNER_PHASE=1)
+  -> Primary rank LLM call -> parse -> Pydantic validate -> materialize ordered hrefs subset
+  -> If invalid / empty allowlisted rows and repair enabled: repair LLM with excerpt + hints
+  -> finalize: emit result_units / result_hrefs; runner maps back to UnitRef with reasons
+  -> RunPlan JSON (+ optional walk_ranked navigations for recording)</pre>
+
+<h1>5. LangGraph ranking</h1>
+<h3>5.1 Nodes</h3>
+<pre>prepare     Builds user JSON: intent, candidates[], ranking_user_message_context (execution_steps, hard_rules)
+planner     If enabled: extra LLM notes only; skipped when LLM_PLANNER_PHASE != 1
+rank_primary Single structured completion; ordered_units must use discovered hrefs only
+rank_repair If needs_repair and LLM_RANKING_REPAIR: second completion with invalid_output excerpt
+finalize    Choose repair vs primary output; fallback to discovery order if nothing valid</pre>
+<h3>5.2 Why a graph vs one shot</h3>
+<ul>
+  <li><strong>Repair path</strong> is conditional: avoids paying for repair on happy path while recovering from schema drift or model mistakes.</li>
+  <li><strong>Planner</strong> is optional: adds latency/cost only when operators enable it.</li>
+  <li><strong>Single orchestrator</strong> (mandatory LangGraph) keeps ranking behavior consistent across providers.</li>
+</ul>
+
+<h1>6. Discovery subsystem</h1>
+<ul>
+  <li><strong>Lazy loading:</strong> <code>TRAILHEAD_DISCOVERY_SCROLL_ROUNDS</code> merges anchors that appear after scroll.</li>
+  <li><strong>Pagination:</strong> <code>TRAILHEAD_DISCOVERY_PAGINATION_CLICKS</code> for Load more / Show more-style controls (bounded).</li>
+  <li><strong>Navigation:</strong> <code>TRAILHEAD_DISCOVERY_NAV_WAIT_UNTIL</code> (e.g. domcontentloaded vs load).</li>
+  <li><strong>Failure semantics:</strong> Zero usable units or degenerate TOC → <code>DiscoveryError</code> with hints; <strong>no LLM call</strong> (saves cost and avoids ranking garbage).</li>
+  <li><strong>Blockers:</strong> Login walls, geo, error pages can be flagged for operator action.</li>
+</ul>
+
+<h1>7. Org and Playground</h1>
+<ul>
+  <li><strong>plan</strong> produces ranked JSON + optional browser walk on Trailhead only.</li>
+  <li><strong>org prepare --open-playground</strong> opens the module URL, title cards, dwell/scroll; <strong>does not</strong> run LangGraph ranking.</li>
+  <li><strong>Launch Playground</strong> remains a human action; <code>TRAILHEAD_RECORDING_PLAYGROUND_CTA_SCROLL</code> only scrolls CTAs into view for clearer recordings.</li>
+  <li><strong>playground_ready</strong> in JSON reflects executor/<code>sf</code> checks, not “browser clicked Launch.”</li>
+  <li><strong>Checklists</strong> map unit context to YAML steps (<code>config/org_checklists.yaml</code>) for hands-on guidance offline from the ranker.</li>
+</ul>
+
+<h1>8. Observability and E2E artifacts</h1>
+<table>
+  <tr><th>Signal</th><th>Where</th></tr>
+  <tr><td><code>trace_id</code></td><td>contextvar; echoed in logs and plan JSON</td></tr>
+  <tr><td><code>duration_ms</code></td><td>Wall time for plan browser + LLM segment</td></tr>
+  <tr><td><code>video_files</code></td><td>Per-session clip list with <code>role</code> primary vs session; <code>primary_video</code> names main demo clip</td></tr>
+  <tr><td><code>e2e-manifest.json</code></td><td>Append-only timeline of plan / open-unit / org_prepare recordings in a directory</td></tr>
+  <tr><td><code>e2e-report.html</code></td><td>Self-contained gallery: videos, chips, manifest, JSON links, org panel</td></tr>
+</table>
+<p><strong>Sidecars:</strong> Persistent profiles closing extra tabs at session start may create short secondary <code>.webm</code> files; consumers should prefer <code>primary_video</code>.</p>
+
+<h2>8.1 Observability pipeline</h2>
+<div class="figure">
+<svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,Segoe UI,sans-serif" font-size="10">
+  <rect x="10" y="40" width="95" height="40" rx="5" fill="#f1f5f9" stroke="#475569"/>
+  <text x="57" y="64" text-anchor="middle">trace_id</text>
+  <text x="57" y="76" text-anchor="middle" font-size="8">contextvar</text>
+  <text x="115" y="68" font-size="14" fill="#64748b">→</text>
+  <rect x="130" y="40" width="100" height="40" rx="5" fill="#e0f2fe" stroke="#0284c7"/>
+  <text x="180" y="64" text-anchor="middle">stderr logs</text>
+  <text x="180" y="76" text-anchor="middle" font-size="8">optional JSON</text>
+  <text x="245" y="68" font-size="14" fill="#64748b">→</text>
+  <rect x="260" y="40" width="95" height="40" rx="5" fill="#fef9c3" stroke="#ca8a04"/>
+  <text x="307" y="64" text-anchor="middle">plan JSON</text>
+  <text x="307" y="76" text-anchor="middle" font-size="8">stdout / file</text>
+  <text x="370" y="68" font-size="14" fill="#64748b">→</text>
+  <rect x="385" y="40" width="90" height="40" rx="5" fill="#ffedd5" stroke="#ea580c"/>
+  <text x="430" y="64" text-anchor="middle">manifest</text>
+  <text x="430" y="76" text-anchor="middle" font-size="8">append</text>
+  <text x="490" y="68" font-size="14" fill="#64748b">+</text>
+  <rect x="505" y="40" width="90" height="40" rx="5" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="550" y="64" text-anchor="middle">.webm</text>
+  <text x="550" y="76" text-anchor="middle" font-size="8">Playwright</text>
+  <rect x="240" y="88" width="220" height="26" rx="4" fill="#ede9fe" stroke="#7c3aed"/>
+  <text x="350" y="105" text-anchor="middle" font-size="9">e2e-report.html aggregates clips + links</text>
+</svg>
+</div>
+<p class="figcap">Figure 3 — One run ties logs, JSON, video, and HTML gallery under the same artifacts directory.</p>
+
+<h1>9. Threat model</h1>
+<table>
+  <tr><th>Risk</th><th>Mitigation</th></tr>
+  <tr><td>Secret leakage</td><td>Keys in .env / CI only; not logged; .gitignore</td></tr>
+  <tr><td>Open redirect / SSRF</td><td><code>validate_start_url()</code> host + path prefix</td></tr>
+  <tr><td>Prompt injection via page copy</td><td>Candidates are title/href structures; system prompt forbids new URLs</td></tr>
+  <tr><td>Academic dishonesty</td><td>No auto-answers; documented intent</td></tr>
+  <tr><td>Supply chain</td><td>Pinned minimum deps; CI tests</td></tr>
+  <tr><td><code>sf</code> subprocess abuse</td><td>Argv lists; no shell=True; validated alias/paths</td></tr>
+</table>
+
+<h1>10. Failure modes</h1>
+<table>
+  <tr><th>Failure</th><th>Behavior</th></tr>
+  <tr><td>DOM drift</td><td>Fewer links; tune waits, scroll, pagination, YAML selectors</td></tr>
+  <tr><td>SSO / MFA</td><td>Use <code>auth</code> + persistent profile</td></tr>
+  <tr><td>LLM 429 / quota</td><td>Tenacity retries (transport class); mapped user-facing errors</td></tr>
+  <tr><td>Bad LLM JSON</td><td>Repair pass or <code>LLMProviderError</code>; empty ranking may fall back to discovery order</td></tr>
+  <tr><td>Windows SSL env</td><td><code>sanitize_environment()</code> strips problematic values</td></tr>
+</table>
+
+<h1>11. Impact analysis</h1>
+<h2>11.1 Intended positive impact</h2>
+<ul>
+  <li><strong>Learner throughput:</strong> Converts “read entire TOC” into a single ranked list aligned to stated intent.</li>
+  <li><strong>Interop:</strong> JSON plan is stable input for checklists, internal LMS hooks, or human review.</li>
+  <li><strong>Trust in demos:</strong> Narration + title cards + manifest reduce “black box” perception of the agent.</li>
+  <li><strong>Boundary clarity:</strong> Explicit non-goals reduce misuse and support compliance conversations.</li>
+</ul>
+<h2>11.2 Limits and negative externalities</h2>
+<ul>
+  <li><strong>Vendor coupling:</strong> Ranking quality and availability depend on LLM APIs and pricing.</li>
+  <li><strong>Maintenance:</strong> Trailhead UI changes are an ongoing tax on discovery, not a one-time parse.</li>
+  <li><strong>No certified pedagogy:</strong> Order is model-opinionated; not curriculum-authoritative without human review.</li>
+</ul>
+
+<h1>12. Novelties and differentiators</h1>
+<ul>
+  <li><strong>Hard grounding:</strong> Output hrefs ⊆ discovered hrefs — strong constraint vs free-form “suggested links.”</li>
+  <li><strong>Graph-shaped LLM workflow:</strong> Conditional repair and optional planner as first-class control flow.</li>
+  <li><strong>Discovery as typed errors:</strong> <code>DiscoveryError</code> with structured <code>details</code> and hints for operators.</li>
+  <li><strong>Demo ergonomics:</strong> Plan vs org visual language (cyan vs purple), epilogue navigation, friendly video filenames.</li>
+  <li><strong>Org separation:</strong> Ranking pipeline never implied to “complete labs”; prepare is explicitly adjacent.</li>
+</ul>
+
+<h1>13. Research positioning and evaluation gaps</h1>
+<p><strong>Not claimed:</strong> New neural architectures, SOTA accuracy on a public Trailhead benchmark (none shipped in-repo).</p>
+<p><strong>Applied research adjacency:</strong> Constrained decoding / structured output; retrieval-grounded generation (candidates as retrieval set); policy-bound web agents; educational integrity.</p>
+<h3>13.1 What a rigorous evaluation would add</h3>
+<pre>Gold set        Human expert ordering for N (start_url, intent) pairs frozen at a DOM snapshot
+Metrics         Kendall tau / pairwise win rate vs gold; nDCG if partial relevance labels
+Ablations       Planner on/off; repair on/off; model family swap; temperature
+Cost curve      Tokens per plan; p95 latency (discovery vs LLM vs total)
+Robustness      DOM snapshot replay vs live site drift (monthly re-run)</pre>
+
+<h1>14. Ethics and misuse resistance</h1>
+<ul>
+  <li>Scope documentation and CLI boundaries reduce “take my quiz” expectations.</li>
+  <li>Allowlisted hrefs limit exfiltration of arbitrary attacker-chosen URLs via model output (still does not eliminate all prompt risks).</li>
+  <li>Human-in-the-loop org steps preserve accountability for org actions.</li>
+</ul>
+
+<h1>15. Roadmap and tradeoffs</h1>
+<h3>15.1 Roadmap</h3>
+<ol>
+  <li>Richer <code>OrgExecutor</code> (deploy, Tooling API, guided org browser).</li>
+  <li>Optional second-pass LLM checklist extraction from unit HTML (still HITL).</li>
+  <li>Disk cache keyed by <code>(start_url, intent_hash)</code>.</li>
+  <li>Optional Pydantic Settings for env.</li>
+</ol>
+<h3>15.2 Tradeoffs</h3>
+<ul>
+  <li><strong>LLM vs rules:</strong> Better intent flexibility vs token cost and uptime dependency.</li>
+  <li><strong>Headless vs headed:</strong> CI vs SSO realism.</li>
+  <li><strong>Scope:</strong> Full Trailhead+org automation would imply legal, ToS, and selector SLAs beyond this codebase.</li>
+</ul>
+
+<h1>16. Exit codes</h1>
+<pre>0   Success
+1   Generic / e.g. open-unit no navigation
+2   Config, URL validation, DiscoveryError, OrgExecutorError (typical)
+3   LLMProviderError
+130 Ctrl+C</pre>
+
+<h1>17. Reference appendix</h1>
+
+<h2>17.1 CLI surface</h2>
+<table>
+  <tr><th>Command</th><th>Purpose</th></tr>
+  <tr><td><code>doctor</code></td><td>Version, LLM key presence, executor type, <code>sf</code> on PATH, optional org display JSON, recording dir hint</td></tr>
+  <tr><td><code>plan</code></td><td>Discovery + LangGraph rank; <code>--json</code> stdout; <code>--walk-ranked N</code>; <code>--artifacts-dir</code></td></tr>
+  <tr><td><code>open-unit</code></td><td>Same ranking path; navigate first <code>--visit-count</code> ranked units</td></tr>
+  <tr><td><code>auth</code></td><td>Interactive sign-in into persistent Chromium profile</td></tr>
+  <tr><td><code>org doctor</code></td><td><code>sf</code> / alias / executor diagnostics</td></tr>
+  <tr><td><code>org checklist</code></td><td>Markdown or JSON steps from plan file, single href, or live plan build</td></tr>
+  <tr><td><code>org prepare</code></td><td>Executor checks; optional <code>--open-playground</code> browser + optional <code>--deploy</code></td></tr>
+</table>
+
+<h2>17.2 <code>plan</code> JSON shape</h2>
+<p>Emitted to <code>e2e-plan-*.json</code> and merged fields on stdout with <code>plan --json</code>. Saved bundle may add <code>saved_at_utc</code>, <code>command</code>, <code>video_dir</code>, <code>video_files</code>, etc.</p>
+<table>
+  <tr><th>Field</th><th>Type / meaning</th></tr>
+  <tr><td><code>agent_version</code></td><td>Package version string</td></tr>
+  <tr><td><code>label</code></td><td>Log label, often start URL</td></tr>
+  <tr><td><code>start_url</code></td><td>Validated module or trail URL</td></tr>
+  <tr><td><code>intent</code></td><td>User natural-language goal</td></tr>
+  <tr><td><code>units[]</code></td><td><code>title</code>, <code>href</code>, <code>reason</code> per ranked row</td></tr>
+  <tr><td><code>trace_id</code></td><td>UUID per CLI invocation</td></tr>
+  <tr><td><code>duration_ms</code></td><td>Wall time browser + LLM segment</td></tr>
+  <tr><td><code>walk_ranked_visits</code></td><td>Count when <code>--walk-ranked</code> used</td></tr>
+  <tr><td><code>primary_video</code></td><td>Main <code>.webm</code> basename when recording</td></tr>
+  <tr><td><code>e2e_session_videos</code></td><td>All new session clips this run</td></tr>
+</table>
+
+<h2>17.3 LLM providers</h2>
+<table>
+  <tr><th>LLM_PROVIDER</th><th>Typical env</th><th>Extra install</th></tr>
+  <tr><td><code>openai</code> default</td><td><code>OPENAI_API_KEY</code>, <code>OPENAI_MODEL</code></td><td>base package</td></tr>
+  <tr><td><code>gemini</code></td><td><code>GOOGLE_API_KEY</code> or <code>GEMINI_API_KEY</code>, <code>GEMINI_MODEL</code></td><td><code>pip install -e ".[gemini]"</code></td></tr>
+  <tr><td><code>anthropic</code></td><td><code>ANTHROPIC_API_KEY</code>, <code>ANTHROPIC_MODEL</code></td><td><code>pip install -e ".[anthropic]"</code></td></tr>
+</table>
+<p>Ranking knobs: <code>LLM_PLANNER_PHASE=1</code> enables planner notes; <code>LLM_RANKING_REPAIR=0</code> disables repair; <code>LLM_OPENAI_STRICT_SCHEMA=1</code> OpenAI strict JSON schema mode.</p>
+
+<h2>17.4 Discovery environment</h2>
+<table>
+  <tr><th>Variable</th><th>Role</th></tr>
+  <tr><td><code>TRAILHEAD_DISCOVERY_SCROLL_ROUNDS</code></td><td>Extra scroll passes for lazy anchors</td></tr>
+  <tr><td><code>TRAILHEAD_DISCOVERY_PAGINATION_CLICKS</code></td><td>Bounded clicks on load-more patterns</td></tr>
+  <tr><td><code>TRAILHEAD_DISCOVERY_NAV_WAIT_UNTIL</code></td><td>Playwright <code>goto</code> wait policy</td></tr>
+  <tr><td><code>TRAILHEAD_PAGE_SETTLE_MS</code></td><td>Post-navigation dwell</td></tr>
+  <tr><td><code>TRAILHEAD_MAX_MODULES</code></td><td>Caps trail crawl breadth</td></tr>
+</table>
+
+<h2>17.5 Recording and demo browser</h2>
+<table>
+  <tr><th>Variable / flag</th><th>Effect</th></tr>
+  <tr><td><code>TRAILHEAD_RECORD_VIDEO_DIR</code> / <code>--artifacts-dir</code></td><td>Playwright saves <code>.webm</code>; enables e2e JSON writes</td></tr>
+  <tr><td><code>TRAILHEAD_RECORDING_DEMO_AUTO</code></td><td>Headed + slow_mo + demo viewport when recording</td></tr>
+  <tr><td><code>--no-recording-demo-browser</code></td><td>Sets demo auto off for CI-style runs</td></tr>
+  <tr><td><code>TRAILHEAD_DEMO_TITLECARDS</code></td><td>Full-screen phase slides in browser</td></tr>
+  <tr><td><code>TRAILHEAD_DEMO_TITLECARD_MS</code></td><td>Dwell per title card</td></tr>
+  <tr><td><code>TRAILHEAD_DEMO_TITLECARD_RANK_MAX</code></td><td>Max units listed on LLM order slide</td></tr>
+  <tr><td><code>TRAILHEAD_DEMO_NARRATION</code></td><td>Stderr step trace; off with <code>=0</code></td></tr>
+  <tr><td><code>TRAILHEAD_PLAN_RECORDING_TAIL_MIN_MS</code></td><td>Dwell on live Trailhead after title cards</td></tr>
+  <tr><td><code>TRAILHEAD_ORG_PREPARE_RECORDING_MIN_MS</code></td><td>Minimum settle after org prepare navigation</td></tr>
+  <tr><td><code>TRAILHEAD_RECORDING_PLAYGROUND_CTA_SCROLL</code></td><td>Scroll Launch/Playground CTAs into view</td></tr>
+  <tr><td><code>TRAILHEAD_E2E_FRIENDLY_VIDEO_NAMES</code></td><td>Rename hash webm to plan-primary / org-prepare / etc.</td></tr>
+  <tr><td><code>TRAILHEAD_E2E_HTML_REPORT</code></td><td>Write <code>e2e-report.html</code></td></tr>
+</table>
+
+<h2>17.6 Python dependencies</h2>
+<pre>playwright, pyyaml, python-dotenv, openai, pydantic, tenacity,
+langgraph, langchain-core
+optional: google-genai, anthropic, google-generativeai legacy</pre>
+
+<h2>17.7 Test and quality gates</h2>
+<pre>pytest tests          unit + integration style harnesses
+ruff / mypy           CI per pyproject / workflows
+Golden fixtures       ranking JSON and plan shape tests</pre>
+
+<h1>18. Conclusion</h1>
+<p>trailhead-agent is a <strong>bounded assistant</strong>: strong URL and output constraints, observable runs, and a deliberate split between “what to study next” (plan) and “how to open Trailhead / org” (prepare). Its deepest contributions are <strong>systems integration</strong>, <strong>safety framing</strong>, and <strong>operator-grade artifacts</strong>, not new core ML. Formal evidence would require gold rankings and measured ablations outside the current repository scope.</p>
+
+<p class="meta" style="margin-top:1.5em;">PDF: open this HTML in Edge/Chrome, Ctrl+P, Save as PDF. Or run <code>scripts\print_docs_to_pdf.ps1</code> (Windows).</p>
+
+</body>
+</html>

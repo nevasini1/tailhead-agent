@@ -1,0 +1,3 @@
+# fpdf2 CLI output (optional). Primary PDFs live in docs/*.pdf (Edge from HTML).
+*
+!.gitignore

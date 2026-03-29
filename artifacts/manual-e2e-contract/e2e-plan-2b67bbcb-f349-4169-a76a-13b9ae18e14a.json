@@ -1,0 +1,57 @@
+{
+  "saved_at_utc": "2026-03-29T17:04:06.979315+00:00",
+  "command": "plan",
+  "video_dir": "C:\\Users\\saima\\Downloads\\preconfigured-trailhead-agent\\artifacts\\manual-e2e-contract",
+  "video_files": [
+    {
+      "name": "plan-primary.webm",
+      "role": "primary",
+      "size_bytes": 7750648,
+      "mtime_utc": "2026-03-29T17:04:06.847358+00:00"
+    }
+  ],
+  "video_files_other_in_dir": [
+    {
+      "name": "org-prepare.webm",
+      "size_bytes": 4068195,
+      "mtime_utc": "2026-03-29T16:54:07.878079+00:00"
+    }
+  ],
+  "agent_version": "0.5.1",
+  "label": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+  "start_url": "https://trailhead.salesforce.com/content/learn/modules/apex_database",
+  "intent": "Hands-on Apex only",
+  "units": [
+    {
+      "title": "Get Started with Apex",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_intro",
+      "reason": "This unit provides the foundational introduction to Apex database operations, essential for a hands-on learning path."
+    },
+    {
+      "title": "Use sObjects",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_sobjects",
+      "reason": "Learn to use sObjects, which are fundamental for interacting with Salesforce data programmatically in Apex, preparing for hands-on manipulation."
+    },
+    {
+      "title": "Manipulate Records with DML",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_dml",
+      "reason": "This unit focuses on hands-on DML operations, directly addressing the 'hands-on Apex' intent by teaching data modification."
+    },
+    {
+      "title": "Write SOQL Queries",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_soql",
+      "reason": "Learn to write SOQL queries for retrieving data, a core hands-on Apex skill for interacting with the database."
+    },
+    {
+      "title": "Write SOSL Queries",
+      "href": "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_sosl",
+      "reason": "This unit covers writing SOSL queries, providing another hands-on method for searching data within Apex, building on SOQL knowledge."
+    }
+  ],
+  "primary_video": "plan-primary.webm",
+  "e2e_session_videos": [
+    "plan-primary.webm"
+  ],
+  "trace_id": "2b67bbcb-f349-4169-a76a-13b9ae18e14a",
+  "duration_ms": 71195
+}
