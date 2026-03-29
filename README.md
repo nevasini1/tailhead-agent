@@ -1,5 +1,7 @@
 # Trailhead agent — LLM-driven planner + Playwright discovery
 
+**Version:** 0.5.0 (see `pyproject.toml`).
+
 This project uses **two layers**:
 
 1. **Playwright** — Opens Trailhead, collects candidate links (module/unit URLs). Structural rules only (HTTPS, allowed host, `/content/learn/` paths).
@@ -33,7 +35,7 @@ It does **not** auto-submit quiz answers or bypass assessments.
 
 | Topic | Detail |
 |--------|--------|
-| **Exit codes** | `0` success; `1` generic / no unit opened; `2` config or URL validation; `3` LLM/API failure; `130` Ctrl+C |
+| **Exit codes** | `0` success; `1` generic / no unit opened; `2` configuration, URL validation, or **org / `sf` integration** (`OrgExecutorError`); `3` LLM/API failure; `130` Ctrl+C |
 | **Structured logs** | `--log-json` → one JSON object per line on stderr |
 | **Machine output** | `plan --json` → single JSON document on stdout (INFO logs suppressed to reduce noise). The plan is an **ordered study queue**: each unit has `title`, `href`, and **`reason`** (short LLM rationale when the ranker returned one). It is not a full written syllabus—Trailhead content lives at each URL. |
 | **Health** | `trailhead-agent doctor` (`--json`) checks version, LLM keys, **`sf` on PATH**, org executor type, and **`sf org display`** connectivity when `sf` exists (**never** prints secrets) |
@@ -41,7 +43,7 @@ It does **not** auto-submit quiz answers or bypass assessments.
 | **LLM resilience** | Tenacity retries on rate limits / 5xx / connection errors (`LLM_MAX_RETRIES`, `LLM_RETRY_MIN_WAIT_S`, `LLM_RETRY_MAX_WAIT_S`) |
 | **Ranking pipeline** | **Pydantic** contracts (`llm_schemas.py`); logs `pipeline_stage=` (`build_payload`, `planner`, `llm_primary`, `validate`, `llm_repair`, `materialize`). Env: **`LLM_PLANNER_PHASE=1`** (extra planner call), **`LLM_RANKING_REPAIR=0`** to disable repair, **`LLM_OPENAI_STRICT_SCHEMA=1`** (OpenAI-only strict `json_schema`) |
 | **LangGraph orchestrator** | **Required.** Ranking always runs through **[LangGraph](https://github.com/langchain-ai/langgraph)** (`ranking_graph.py`): prepare → planner → rank → conditional repair → finalize. Installed with the base package (`langgraph`, `langchain-core` in `pyproject.toml`). |
-| **E2E artifacts** | **`plan --save-e2e`** or **`plan --artifacts-dir PATH`** saves Playwright **`.webm`** + **`e2e-plan-<trace_id>.json`** / **`e2e-plan-latest.json`** (same as stdout JSON plus `saved_at_utc`, `video_files`). **`open-unit`** supports the same flags. Env alternative: **`TRAILHEAD_RECORD_VIDEO_DIR`**. **`plan --walk-ranked N`** (and **`open-unit --visit-count N`**) navigates the first *N* ranked unit URLs in one session after ranking so recordings show clear URL-by-URL progression (navigation only). Plan JSON may include **`walk_ranked_visits`**. One-shot scripts default to walking a few units: **`scripts/run-e2e-plan.ps1`** / **`run-e2e-plan.sh`** (override with `-WalkRanked 0` or **`WALK_RANKED=0`**). |
+| **E2E artifacts** | **`plan --save-e2e`** or **`plan --artifacts-dir PATH`** saves Playwright **`.webm`** + **`e2e-plan-<trace_id>.json`** / **`e2e-plan-latest.json`** (same as stdout JSON plus `saved_at_utc`, `video_files`). **`open-unit`** supports the same flags. Env alternative: **`TRAILHEAD_RECORD_VIDEO_DIR`**. **`plan --walk-ranked N`** (and **`open-unit --visit-count N`**) navigates the first *N* ranked unit URLs in one session after ranking so recordings show clear URL-by-URL progression (navigation only). Plan JSON may include **`walk_ranked_visits`**. One-shot scripts default to walking a few units: **`scripts/run-e2e-plan.ps1`** / **`run-e2e-plan.sh`** (override with `-WalkRanked 0` or **`WALK_RANKED=0`**). This repo may include **sample runs under `artifacts/`** for demos; for your own work, prefer not committing large or repeated recordings (re-add `artifacts/` to `.gitignore` locally if needed). |
 | **Gemini SDK** | Prefer `pip install -e ".[gemini]"` (**google-genai**). Legacy `google-generativeai` is optional: `pip install -e ".[legacy-gemini]"` |
 | **Tests / types** | `pip install -e ".[dev]"` then `pytest` and `mypy src/trailhead_agent tests` |
 
@@ -49,7 +51,7 @@ It does **not** auto-submit quiz answers or bypass assessments.
 
 | Source | Purpose |
 |--------|---------|
-| **`.env`** | LLM keys, `TRAILHEAD_START_URL`, `TRAILHEAD_INTENT`, tuning — see `.env.example` |
+| **`.env`** | LLM keys, `TRAILHEAD_START_URL`, `TRAILHEAD_INTENT`, tuning, optional **org / `sf`** settings (`TRAILHEAD_ORG_EXECUTOR`, `TRAILHEAD_SF_ORG_ALIAS`, …) — see `.env.example` |
 | **`config/default.yaml`** | Browser + login **selectors** only |
 
 Optional: **`TRAILHEAD_AGENT_PROMPT_FILE`** for a custom system prompt.
@@ -72,6 +74,8 @@ Fill `.env` with **`TRAILHEAD_START_URL`**, **`TRAILHEAD_INTENT`**, and your LLM
 Use **`TRAILHEAD_BROWSER_USER_DATA_DIR`** and **`trailhead-agent auth`** once; see `.env.example`.
 
 ## Commands
+
+The CLI uses **subcommands**: `doctor`, `plan`, `open-unit`, `auth`, and `org` (with `org doctor` / `org checklist` / `org prepare`). Global options: **`--log-json`**, **`--log-level`**, **`-v`** / **`--verbose`** (before the subcommand). Examples:
 
 ```powershell
 trailhead-agent doctor
@@ -99,7 +103,7 @@ Uses static checklists in [`config/org_checklists.yaml`](config/org_checklists.y
 trailhead-agent org doctor
 trailhead-agent org doctor --json --sf-org-alias myScratch1
 
-trailhead-agent org checklist --plan-json .\artifacts\e2e\e2e-plan-latest.json --json
+trailhead-agent org checklist --plan-json .\artifacts\run-2026-03-28_20-20-38\e2e-plan-latest.json --json
 trailhead-agent org checklist --unit-href "https://trailhead.salesforce.com/content/learn/modules/apex_database/apex_database_intro"
 
 trailhead-agent org prepare --json
@@ -114,14 +118,19 @@ trailhead-agent org prepare --deploy --project-dir C:\path\to\sfdx-project --sf-
 2. **Discovery** — Collects module/unit links (trail → module roots → units when needed).
 3. **`llm_agent`** — OpenAI (default), **Gemini** (`google-genai`), or Anthropic; JSON-only parsing with href allowlisting.
 4. **Runner** — `plan` / `open-unit`; URL validation before navigation.
-5. **`org_executor`** — Stub for future Salesforce org / Playground automation ([`DESIGN.md`](DESIGN.md), implementation plan [`PLAN_ORG_EXECUTOR.md`](PLAN_ORG_EXECUTOR.md)).
+5. **`org_executor`** — **`NoopOrgExecutor`** by default; **`CliOrgExecutor`** when **`TRAILHEAD_ORG_EXECUTOR=cli`** (`sf org display`, YAML checklists, optional **`sf project deploy`**). CLI: **`trailhead-agent org …`**. See [`DESIGN.md`](DESIGN.md) and [`PLAN_ORG_EXECUTOR.md`](PLAN_ORG_EXECUTOR.md).
 
 ## Docker
 
 ```bash
 docker build -t trailhead-agent .
-docker run --rm -e GOOGLE_API_KEY -e LLM_PROVIDER=gemini -e TRAILHEAD_START_URL -e TRAILHEAD_INTENT trailhead-agent plan --json
+docker run --rm \
+  -e GOOGLE_API_KEY -e LLM_PROVIDER=gemini \
+  -e TRAILHEAD_START_URL -e TRAILHEAD_INTENT \
+  trailhead-agent plan --json
 ```
+
+(`ENTRYPOINT` is `trailhead-agent`; **`plan`** reads **`TRAILHEAD_START_URL`** / **`TRAILHEAD_INTENT`** from the environment if you omit **`--start-url`** / **`--intent`**. Default image **`CMD`** is **`doctor --json`**.)
 
 Override entrypoint if you need `auth` (headed browser usually requires a local display / X11; use host Chrome + `.env` instead for OAuth).
 
